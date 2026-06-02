@@ -1,9 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect, type ReactNode } from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
+import { MemoryRouter, useLocation } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { NavBar } from '@genomicx/ui';
+
+// Bridges react-router-dom navigation (used by @genomicx/ui NavBar) to Next.js router.
+function RouterSyncer() {
+  const location = useLocation();
+  const router = useRouter();
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    router.push(location.pathname);
+  }, [location.pathname, router]);
+  return null;
+}
 
 function PuzzleIcon() {
   return (
@@ -57,6 +70,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
 
   return (
     <MemoryRouter>
+      <RouterSyncer />
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--gx-bg)' }}>
         <NavBar
           appName="GHRUPUZZLES"
