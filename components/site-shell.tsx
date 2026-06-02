@@ -5,6 +5,17 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { AppShell } from '@genomicx/ui';
 
+function PuzzleIcon() {
+  return (
+    <svg className="gx-nav-logo-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        fill="var(--gx-accent)"
+        d="M3 3 L9 3 Q9 1 11 1 Q13 1 13 3 L21 3 L21 9 Q23 9 23 11 Q23 13 21 13 L21 21 L15 21 Q15 23 13 23 Q11 23 11 21 L3 21 L3 15 Q1 15 1 13 Q1 11 3 11 Z"
+      />
+    </svg>
+  );
+}
+
 function ExerciseLinks({ mobile = false }: { mobile?: boolean }) {
   const className = mobile ? 'gx-nav-dropdown-link' : 'gx-nav-link';
 
@@ -50,6 +61,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
         appName="GHRUPUZZLES"
         appSubtitle="Microbial genome benchmarking exercises"
         version="0.2.0"
+        icon={<PuzzleIcon />}
         actions={<ExerciseLinks />}
         mobileActions={<ExerciseLinks mobile />}
       >
