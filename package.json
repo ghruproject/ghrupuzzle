@@ -9,10 +9,12 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "fomantic-ui": "^2.9.4",
+    "@genomicx/ui": "^0.9.1",
     "next": "15.3.9",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-hot-toast": "^2.6.0",
+    "react-router-dom": "^7.16.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
