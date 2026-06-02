@@ -3,24 +3,28 @@ import Link from 'next/link';
 const exercises = [
   {
     href: '/assembly',
+    practiceHref: '/assembly/practice',
     title: 'Short-read assembly',
     mode: 'Challenge + practice',
     copy: 'De novo assembly, contamination detection, and structured QC reporting from paired-end Illumina-style reads.',
   },
   {
     href: '/hybrid-assembly',
+    practiceHref: '/hybrid-assembly/practice',
     title: 'Hybrid assembly',
     mode: 'New exercise',
     copy: 'Simulated short and long reads designed for benchmarking hybrid assembly, polishing, and assembly completeness.',
   },
   {
     href: '/typing',
+    practiceHref: '/typing/practice',
     title: 'Genotyping',
     mode: 'Challenge + practice',
     copy: 'Assembly-based Klebsiella typing focused on normalised locus, serotype, and resistance interpretation.',
   },
   {
     href: '/outbreak',
+    practiceHref: '/outbreak/practice',
     title: 'Outbreak analysis',
     mode: 'Challenge + practice',
     copy: 'Reference mapping, variant calling, phylogeny, and cluster interpretation with an outbreak-style cohort.',
@@ -72,13 +76,19 @@ export default function Home() {
             </div>
             <h2 className="text-lg font-bold text-[var(--gx-text)] mt-1 mb-1">{exercise.title}</h2>
             <p className="text-sm text-[var(--gx-text-muted)] flex-1">{exercise.copy}</p>
-            <div className="flex flex-wrap gap-3 mt-1">
+            <div className="flex flex-wrap gap-2 mt-1">
               <Link
-                href={exercise.href}
-                className="inline-flex items-center justify-center px-4 py-2 rounded-xl font-bold text-[var(--gx-text-inverted)] hover:opacity-90 transition-opacity text-sm"
+                href={exercise.practiceHref}
+                className="inline-flex items-center justify-center px-3 py-2 rounded-xl font-bold text-[var(--gx-text-inverted)] hover:opacity-90 transition-opacity text-sm"
                 style={{ background: 'var(--gx-gradient)' }}
               >
-                Open exercise
+                Practice
+              </Link>
+              <Link
+                href={exercise.href}
+                className="inline-flex items-center justify-center px-3 py-2 rounded-xl font-bold border border-[var(--gx-border)] text-[var(--gx-text)] hover:text-[var(--gx-text-bright)] bg-transparent transition-colors text-sm"
+              >
+                Challenge
               </Link>
             </div>
           </article>

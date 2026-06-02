@@ -110,7 +110,7 @@ export function ExercisePage<TSample extends { public_name: string }>({
         </div>
         <h1 className="text-4xl font-bold leading-tight text-[var(--gx-text)] mt-0 mb-4">{definition.title}</h1>
         <p className="text-lg text-[var(--gx-text-muted)] max-w-3xl mb-5">{definition.summary}</p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 mb-2">
           <span className="inline-flex items-center px-3 py-1 rounded-full border border-[var(--gx-border)] bg-[var(--gx-accent-dim)] text-[var(--gx-text-bright)] text-xs font-semibold">
             {definition.mode === 'challenge' ? 'Challenge' : 'Practice'}
           </span>
@@ -123,6 +123,20 @@ export function ExercisePage<TSample extends { public_name: string }>({
             </span>
           ) : null}
         </div>
+        {definition.mode === 'challenge' && definition.practiceHref ? (
+          <div className="mt-4">
+            <Link
+              href={definition.practiceHref}
+              className="inline-flex items-center justify-center px-4 py-2 rounded-xl font-bold border border-[var(--gx-border)] text-[var(--gx-text)] hover:text-[var(--gx-text-bright)] bg-transparent transition-colors text-sm"
+            >
+              Open practice version →
+            </Link>
+          </div>
+        ) : definition.mode === 'practice' ? (
+          <div className="mt-4 text-sm text-[var(--gx-text-muted)]">
+            This is the practice set — lower stakes, same workflow.
+          </div>
+        ) : null}
       </section>
 
       {/* Loading / error states */}
