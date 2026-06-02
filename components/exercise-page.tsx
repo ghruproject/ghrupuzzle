@@ -29,18 +29,24 @@ function fileNameFromUrl(value: string) {
 
 function ReferenceList({ references }: { references: ReferenceGenome[] }) {
   return (
-    <div className="gx-stack-sm">
+    <div className="space-y-3 mt-2">
       {references.map((reference) => (
-        <div key={reference.accession} className="gx-reference-item">
+        <div
+          key={reference.accession}
+          className="grid gap-1 p-4 border border-[var(--gx-border)] rounded-xl bg-[var(--gx-surface)]"
+        >
           <div>
-            <p className="gx-reference-title">
-              {reference.organism} <span>{reference.accession}</span>
+            <p className="m-0 font-bold text-[var(--gx-text-bright)]">
+              {reference.organism}{' '}
+              <span className="ml-1 text-[var(--gx-accent)] font-mono text-sm">{reference.accession}</span>
             </p>
-            {reference.assembly_name ? <p className="gx-reference-copy">{reference.assembly_name}</p> : null}
+            {reference.assembly_name ? (
+              <p className="mt-1 m-0 text-[var(--gx-text-muted)] text-sm">{reference.assembly_name}</p>
+            ) : null}
           </div>
           <div>
-            {reference.source ? <p className="gx-reference-copy">{reference.source}</p> : null}
-            {reference.note ? <p className="gx-reference-copy">{reference.note}</p> : null}
+            {reference.source ? <p className="m-0 text-[var(--gx-text-muted)] text-sm">{reference.source}</p> : null}
+            {reference.note ? <p className="m-0 text-[var(--gx-text-muted)] text-sm">{reference.note}</p> : null}
           </div>
         </div>
       ))}
@@ -96,32 +102,53 @@ export function ExercisePage<TSample extends { public_name: string }>({
   const canDownload = hasSamples && hasSampleSheet;
 
   return (
-    <div className="gx-page">
-      <section className="gx-hero">
-        <div className="gx-kicker">{definition.kindLabel}</div>
-        <h1>{definition.title}</h1>
-        <p className="gx-hero-copy">{definition.summary}</p>
-        <div className="gx-hero-meta">
-          <span className="gx-tag">{definition.mode === 'challenge' ? 'Challenge' : 'Practice'}</span>
-          <span className="gx-tag">Dataset: {loading ? 'loading' : dataset?.samples.length ?? 0} samples</span>
+    <div className="max-w-5xl mx-auto px-4 py-10">
+      {/* Hero */}
+      <section className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-surface)] p-8 shadow-sm mb-8">
+        <div className="inline-flex mb-3 text-xs font-extrabold tracking-widest uppercase text-[var(--gx-accent)]">
+          {definition.kindLabel}
+        </div>
+        <h1 className="text-4xl font-bold leading-tight text-[var(--gx-text)] mt-0 mb-4">{definition.title}</h1>
+        <p className="text-lg text-[var(--gx-text-muted)] max-w-3xl mb-5">{definition.summary}</p>
+        <div className="flex flex-wrap gap-2">
+          <span className="inline-flex items-center px-3 py-1 rounded-full border border-[var(--gx-border)] bg-[var(--gx-accent-dim)] text-[var(--gx-text-bright)] text-xs font-semibold">
+            {definition.mode === 'challenge' ? 'Challenge' : 'Practice'}
+          </span>
+          <span className="inline-flex items-center px-3 py-1 rounded-full border border-[var(--gx-border)] bg-[var(--gx-accent-dim)] text-[var(--gx-text-bright)] text-xs font-semibold">
+            Dataset: {loading ? 'loading' : dataset?.samples.length ?? 0} samples
+          </span>
           {dataset?.answer_sheet?.species?.length ? (
-            <span className="gx-tag">Expected species: {dataset.answer_sheet.species.join(', ')}</span>
+            <span className="inline-flex items-center px-3 py-1 rounded-full border border-[var(--gx-border)] bg-[var(--gx-accent-dim)] text-[var(--gx-text-bright)] text-xs font-semibold">
+              Expected species: {dataset.answer_sheet.species.join(', ')}
+            </span>
           ) : null}
         </div>
       </section>
 
-      {loading ? <div className="card gx-message-card">Loading exercise metadata...</div> : null}
-      {error ? <div className="card gx-message-card gx-message-error">{error}</div> : null}
+      {/* Loading / error states */}
+      {loading ? (
+        <div className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-surface)] p-6 mb-6">
+          Loading exercise metadata...
+        </div>
+      ) : null}
+      {error ? (
+        <div className="rounded-2xl border border-red-400/40 bg-[var(--gx-surface)] p-6 mb-6">{error}</div>
+      ) : null}
 
+      {/* Locked challenge */}
       {!loading && !error && definition.mode === 'challenge' && !releaseReady ? (
-        <div className="card gx-message-card">
-          <h2>Challenge locked</h2>
-          <p>
+        <div className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-surface)] p-6 mb-6">
+          <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">Challenge locked</h2>
+          <p className="text-[var(--gx-text-muted)]">
             The challenge dataset will be available on <strong>{formatReleaseDate(dataset?.release_date)}</strong>.
           </p>
           {definition.practiceHref ? (
-            <div className="gx-button-row">
-              <Link href={definition.practiceHref} className="gx-button">
+            <div className="flex flex-wrap gap-3 mt-4">
+              <Link
+                href={definition.practiceHref}
+                className="inline-flex items-center justify-center px-4 py-3 rounded-xl font-bold text-[var(--gx-text-inverted)] hover:opacity-90 transition-opacity"
+                style={{ background: 'var(--gx-gradient)' }}
+              >
                 Open practice exercise
               </Link>
             </div>
@@ -129,35 +156,46 @@ export function ExercisePage<TSample extends { public_name: string }>({
         </div>
       ) : null}
 
+      {/* Main content grid */}
       {!loading && !error && (definition.mode !== 'challenge' || releaseReady) ? (
-        <div className="gx-grid">
-          <section className="card gx-panel">
-            <h2>Task</h2>
-            <p>{definition.subtitle}</p>
-            <ul className="gx-list">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Task */}
+          <section className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-surface)] p-6">
+            <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">Task</h2>
+            <p className="text-[var(--gx-text-muted)] mb-3">{definition.subtitle}</p>
+            <ul className="pl-5 list-disc space-y-2 text-[var(--gx-text-muted)] mb-3">
               {definition.instructions.map((instruction) => (
                 <li key={instruction}>{instruction}</li>
               ))}
             </ul>
-            <p className="gx-muted">{definition.submissionText}</p>
+            <p className="text-[var(--gx-text-muted)]">{definition.submissionText}</p>
           </section>
 
-          <section className="card gx-panel">
-            <h2>Sample Sheet Columns</h2>
-            <p>{definition.sampleSheetIntro}</p>
-            <div className="gx-table-wrap">
-              <table className="gx-table">
+          {/* Sample Sheet Columns */}
+          <section className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-surface)] p-6">
+            <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">Sample Sheet Columns</h2>
+            <p className="text-[var(--gx-text-muted)] mb-4">{definition.sampleSheetIntro}</p>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse min-w-[640px]">
                 <thead>
                   <tr>
-                    <th>Column</th>
-                    <th>Description</th>
+                    <th className="px-4 py-3 border-b border-[var(--gx-border)] text-left text-xs uppercase tracking-wider text-[var(--gx-text-muted)]">
+                      Column
+                    </th>
+                    <th className="px-4 py-3 border-b border-[var(--gx-border)] text-left text-xs uppercase tracking-wider text-[var(--gx-text-muted)]">
+                      Description
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {definition.answerColumns.map((column) => (
                     <tr key={column.name}>
-                      <td>{column.name}</td>
-                      <td>{column.description}</td>
+                      <td className="px-4 py-3 border-b border-[var(--gx-border)] align-top text-[var(--gx-text)]">
+                        {column.name}
+                      </td>
+                      <td className="px-4 py-3 border-b border-[var(--gx-border)] align-top text-[var(--gx-text-muted)]">
+                        {column.description}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -165,20 +203,29 @@ export function ExercisePage<TSample extends { public_name: string }>({
             </div>
           </section>
 
-          <section className="card gx-panel">
-            <h2>Exercise Assets</h2>
+          {/* Exercise Assets */}
+          <section className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-surface)] p-6">
+            <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">Exercise Assets</h2>
             {canDownload ? (
               <>
-                <p>Download the sample sheet and sequencing files directly, or use the generated shell helpers.</p>
-                <div className="gx-button-row">
-                  <a href={dataset?.sample_sheet.url} target="_blank" rel="noopener noreferrer" className="gx-button">
+                <p className="text-[var(--gx-text-muted)] mb-4">
+                  Download the sample sheet and sequencing files directly, or use the generated shell helpers.
+                </p>
+                <div className="flex flex-wrap gap-3 mb-4">
+                  <a
+                    href={dataset?.sample_sheet.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center px-4 py-3 rounded-xl font-bold text-[var(--gx-text-inverted)] hover:opacity-90 transition-opacity text-sm"
+                    style={{ background: 'var(--gx-gradient)' }}
+                  >
                     Download sample sheet
                   </a>
                   <a
                     href={`/${definition.downloadPrefix}-curl-download_samples.txt`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="gx-button gx-button-secondary"
+                    className="inline-flex items-center justify-center px-4 py-3 rounded-xl font-bold border border-[var(--gx-border)] text-[var(--gx-text)] hover:text-[var(--gx-text-bright)] bg-transparent transition-colors text-sm"
                   >
                     curl helper
                   </a>
@@ -186,7 +233,7 @@ export function ExercisePage<TSample extends { public_name: string }>({
                     href={`/${definition.downloadPrefix}-wget-download_samples.txt`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="gx-button gx-button-secondary"
+                    className="inline-flex items-center justify-center px-4 py-3 rounded-xl font-bold border border-[var(--gx-border)] text-[var(--gx-text)] hover:text-[var(--gx-text-bright)] bg-transparent transition-colors text-sm"
                   >
                     wget helper
                   </a>
@@ -194,15 +241,15 @@ export function ExercisePage<TSample extends { public_name: string }>({
               </>
             ) : (
               <>
-                <h3>{definition.emptyStateTitle}</h3>
-                <p>{definition.emptyStateBody}</p>
+                <h3 className="text-lg font-semibold text-[var(--gx-text)] mb-2">{definition.emptyStateTitle}</h3>
+                <p className="text-[var(--gx-text-muted)]">{definition.emptyStateBody}</p>
               </>
             )}
 
             {dataset?.notes?.length ? (
-              <div className="gx-stack-sm">
-                <h3>Dataset Notes</h3>
-                <ul className="gx-list">
+              <div className="mt-4 space-y-3">
+                <h3 className="text-lg font-semibold text-[var(--gx-text)] mb-2">Dataset Notes</h3>
+                <ul className="pl-5 list-disc space-y-2 text-[var(--gx-text-muted)]">
                   {dataset.notes.map((note) => (
                     <li key={note}>{note}</li>
                   ))}
@@ -211,9 +258,9 @@ export function ExercisePage<TSample extends { public_name: string }>({
             ) : null}
 
             {dataset?.references?.length ? (
-              <div className="gx-stack-sm">
-                <h3>Reference Genomes</h3>
-                <p className="gx-muted">
+              <div className="mt-4">
+                <h3 className="text-lg font-semibold text-[var(--gx-text)] mb-2">Reference Genomes</h3>
+                <p className="text-[var(--gx-text-muted)] mb-3">
                   These references are intended as starting material for simulation via NCBI Datasets plus your preferred short-read and
                   long-read simulators.
                 </p>
@@ -222,21 +269,27 @@ export function ExercisePage<TSample extends { public_name: string }>({
             ) : null}
           </section>
 
-          <section className="card gx-panel gx-panel-wide">
-            <div className="gx-panel-heading">
+          {/* Samples — full width */}
+          <section className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-surface)] p-6 md:col-span-2">
+            <div className="flex items-start justify-between gap-4 mb-4">
               <div>
-                <h2>Samples</h2>
-                <p className="gx-muted">Public identifiers and downloadable inputs for this exercise.</p>
+                <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-1">Samples</h2>
+                <p className="text-[var(--gx-text-muted)] text-sm">Public identifiers and downloadable inputs for this exercise.</p>
               </div>
             </div>
 
             {hasSamples ? (
-              <div className="gx-table-wrap">
-                <table className="gx-table">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse min-w-[640px]">
                   <thead>
                     <tr>
                       {definition.sampleColumns.map((column) => (
-                        <th key={String(column.key)}>{column.label}</th>
+                        <th
+                          key={String(column.key)}
+                          className="px-4 py-3 border-b border-[var(--gx-border)] text-left text-xs uppercase tracking-wider text-[var(--gx-text-muted)]"
+                        >
+                          {column.label}
+                        </th>
                       ))}
                     </tr>
                   </thead>
@@ -247,7 +300,10 @@ export function ExercisePage<TSample extends { public_name: string }>({
                           const value = String(sample[column.key] ?? '');
 
                           return (
-                            <td key={String(column.key)}>
+                            <td
+                              key={String(column.key)}
+                              className="px-4 py-3 border-b border-[var(--gx-border)] align-top text-[var(--gx-text)]"
+                            >
                               {column.isFile && value ? (
                                 <a href={value} target="_blank" rel="noopener noreferrer">
                                   {fileNameFromUrl(value)}
@@ -264,7 +320,7 @@ export function ExercisePage<TSample extends { public_name: string }>({
                 </table>
               </div>
             ) : (
-              <p className="gx-muted">No uploaded samples yet.</p>
+              <p className="text-[var(--gx-text-muted)]">No uploaded samples yet.</p>
             )}
           </section>
         </div>
