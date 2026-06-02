@@ -51,7 +51,7 @@ export default function AboutPage() {
             </a>
             : reuse is encouraged with attribution for non-commercial use.
           </p>
-          <Image src="/cc4bync.png" alt="Creative Commons BY NC 4.0 License" width={120} height={100} />
+          <Image src="/cc4bync.png" alt="Creative Commons BY NC 4.0 License" width={120} height={42} />
         </section>
       </div>
     </div>
