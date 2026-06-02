@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect, type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { AppShell } from '@genomicx/ui';
+import { NavBar } from '@genomicx/ui';
 
 function PuzzleIcon() {
   return (
@@ -57,16 +57,34 @@ export function SiteShell({ children }: { children: ReactNode }) {
 
   return (
     <MemoryRouter>
-      <AppShell
-        appName="GHRUPUZZLES"
-        appSubtitle="Microbial genome benchmarking exercises"
-        version="0.2.0"
-        icon={<PuzzleIcon />}
-        actions={<ExerciseLinks />}
-        mobileActions={<ExerciseLinks mobile />}
-      >
-        {children}
-      </AppShell>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--gx-bg)' }}>
+        <NavBar
+          appName="GHRUPUZZLES"
+          appSubtitle="Microbial genome benchmarking exercises"
+          version="0.2.0"
+          icon={<PuzzleIcon />}
+          actions={<ExerciseLinks />}
+          mobileActions={<ExerciseLinks mobile />}
+        />
+        <main style={{ flex: 1 }}>{children}</main>
+        <footer className="gx-footer">
+          <div className="gx-footer-inner">
+            <div className="gx-footer-content">
+              <div className="gx-footer-text">
+                <p className="gx-footer-text-title">GHRUPUZZLES</p>
+                <p className="gx-footer-text-sub">
+                  Funded by the National Institute for Health Research (NIHR) under grant NIHR133307.
+                </p>
+              </div>
+              <div className="gx-footer-links">
+                <a href="https://genomicx.org" target="_blank" rel="noopener noreferrer" className="gx-footer-link">
+                  genomicx.org
+                </a>
+              </div>
+            </div>
+          </div>
+        </footer>
+      </div>
     </MemoryRouter>
   );
 }
