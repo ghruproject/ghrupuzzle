@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#0d9488"/>
+  <path fill="white" d="
+    M 5 5
+    L 13 5
+    Q 13 3 15 3 Q 17 3 17 5
+    L 27 5
+    L 27 13
+    Q 29 13 29 15 Q 29 17 27 17
+    L 27 27
+    L 19 27
+    Q 19 29 17 29 Q 15 29 15 27
+    L 5 27
+    L 5 19
+    Q 3 19 3 17 Q 3 15 5 15
+    Z
+  "/>
+</svg>
