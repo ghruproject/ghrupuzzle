@@ -90,11 +90,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
                   Funded by the National Institute for Health Research (NIHR) under grant NIHR133307.
                 </p>
               </div>
-              <div className="gx-footer-links">
-                <a href="https://genomicx.org" target="_blank" rel="noopener noreferrer" className="gx-footer-link">
-                  genomicx.org
-                </a>
-              </div>
+              <div className="gx-footer-links" />
             </div>
           </div>
         </footer>
