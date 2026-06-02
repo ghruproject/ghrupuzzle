@@ -1,54 +1,59 @@
-import React from 'react';
 import Image from 'next/image';
 
-const AboutPage: React.FC = () => {
-    return (
+export default function AboutPage() {
+  return (
+    <div className="gx-page">
+      <section className="gx-hero">
+        <div className="gx-kicker">About</div>
+        <h1>Controlled exercises for pathogen genomics training.</h1>
+        <p className="gx-hero-copy">
+          GHRUPuzzles is a skills assessment and training surface for the Global Health Research Unit on Genomic Surveillance of
+          Antimicrobial Resistance. The aim is simple: give participants realistic files, clear deliverables, and enough structure
+          to compare pipelines without making the exercise trivial.
+        </p>
+      </section>
 
-        <div className="content">
-            <section className="section is-medium">
-            <h1 className="title">About Us</h1>
-            <p className="text-lg">
-                Welcome to <strong>GHRUPuzzles</strong>! These datasets are designed as a skills assessment tool for members  
-                of the <strong>Global Health Research Unit (GHRU)</strong> on Genomic Surveillance of Antimicrobial Resistance.  
-                However, anyone with an interest in bioinformatics and pathogen genomics is welcome to try these exercises.
-            </p>
-            
-            <p className="mt-4 text-lg">
-                GHRU is an international initiative focused on enhancing the capacity for genomic surveillance of antimicrobial  
-                resistance (AMR) in pathogens. The project supports researchers and public health professionals worldwide by  
-                providing training, tools, and data-sharing platforms to improve outbreak investigations, pathogen tracking,  
-                and genomic data analysis.
-            </p>
+      <div className="gx-grid">
+        <section className="card gx-panel">
+          <h2>What the exercises test</h2>
+          <ul className="gx-list">
+            <li>Deploying and running the right bioinformatics tools in a reproducible environment.</li>
+            <li>Interpreting QC, taxonomy, typing, and phylogenetic outputs rather than just generating them.</li>
+            <li>Returning a clean sample sheet or analysis artifact that another team can immediately consume.</li>
+          </ul>
+        </section>
 
-            <p className="mt-4 text-lg">
-                GHRUPuzzle offers a series of bioinformatics challenges designed to test and develop core analytical skills,  
-                including genome assembly, genotyping, and phylogenetic analysis. Participants can use these exercises to  
-                refine their expertise and prepare for real-world genomic surveillance tasks.
-            </p>
+        <section className="card gx-panel">
+          <h2>Programme context</h2>
+          <p>
+            GHRU supports genomic surveillance of antimicrobial resistance across international public health and research settings.
+            These drills are intended for GHRU members first, but anyone working in pathogen genomics can use them as a benchmark.
+          </p>
+          <p>
+            Learn more at{' '}
+            <a href="https://ghru.pathogensurveillance.net/" target="_blank" rel="noopener noreferrer">
+              ghru.pathogensurveillance.net
+            </a>
+            .
+          </p>
+        </section>
 
-            <p className="mt-4 text-lg">
-                Learn more about GHRU and access additional resources at:     
-                <a 
-                    href="https://ghru.pathogensurveillance.net/" 
-                    className="text-blue-600 hover:underline" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                >
-                    GHRU Pathogen Surveillance
-                </a>.
-            </p>
-            <p>
-              <strong>GHRUPuzzles</strong> by <a href="https://www.pathogensurveillance.net/">Nabil-Fareed Alikhan</a>. All content here is licensed under a Creative Commons Attribution 4.0 International License <a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY NC 4.0</a>.               Reuse is encouraged with acknowledgement but only noncommercial uses of the work are permitted. Credit must be given to creator.
-            </p>        
-                <Image 
-                    src="/cc4bync.png"
-                    alt="Creative Commons BY NC 4.0 License"
-                    width={120}
-                    height={100}
-                />
-            </section>
-        </div>
-    );
-};
-
-export default AboutPage;
+        <section className="card gx-panel gx-panel-wide">
+          <h2>Licensing</h2>
+          <p>
+            GHRUPuzzles was created by{' '}
+            <a href="https://www.pathogensurveillance.net/" target="_blank" rel="noopener noreferrer">
+              Nabil-Fareed Alikhan
+            </a>
+            . Content is released under{' '}
+            <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer">
+              CC BY-NC 4.0
+            </a>
+            : reuse is encouraged with attribution for non-commercial use.
+          </p>
+          <Image src="/cc4bync.png" alt="Creative Commons BY NC 4.0 License" width={120} height={100} />
+        </section>
+      </div>
+    </div>
+  );
+}

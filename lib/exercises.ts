@@ -1,0 +1,73 @@
+export type ExerciseMode = 'practice' | 'challenge';
+
+export interface SampleSheetLink {
+  filename?: string;
+  url: string;
+}
+
+export interface AnswerSheetSummary {
+  filename?: string;
+  url?: string;
+  species: string[];
+}
+
+export interface ReferenceGenome {
+  accession: string;
+  organism: string;
+  assembly_name?: string;
+  source?: string;
+  note?: string;
+}
+
+export interface ShortReadSample {
+  public_name: string;
+  R1_URL: string;
+  R2_URL: string;
+}
+
+export interface TypingSample {
+  public_name: string;
+  FASTA_URL: string;
+}
+
+export interface HybridAssemblySample extends ShortReadSample {
+  LONG_READ_URL: string;
+  reference_accession?: string;
+}
+
+export interface ExerciseDataset<TSample> {
+  samples: TSample[];
+  answer_sheet: AnswerSheetSummary;
+  sample_sheet: SampleSheetLink;
+  release_date?: string;
+  references?: ReferenceGenome[];
+  notes?: string[];
+}
+
+export interface InstructionColumn {
+  name: string;
+  description: string;
+}
+
+export interface ExerciseDefinition<TSample> {
+  slug: string;
+  title: string;
+  subtitle: string;
+  summary: string;
+  mode: ExerciseMode;
+  kindLabel: string;
+  practiceHref?: string;
+  datasetPath: string;
+  downloadPrefix: string;
+  instructions: string[];
+  sampleSheetIntro: string;
+  submissionText: string;
+  answerColumns: InstructionColumn[];
+  sampleColumns: Array<{
+    key: keyof TSample;
+    label: string;
+    isFile?: boolean;
+  }>;
+  emptyStateTitle: string;
+  emptyStateBody: string;
+}

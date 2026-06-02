@@ -1,0 +1,36 @@
+{
+  "samples": [],
+  "answer_sheet": {
+    "filename": "",
+    "url": "",
+    "species": [
+      "Klebsiella pneumoniae",
+      "Acinetobacter baumannii"
+    ]
+  },
+  "sample_sheet": {
+    "filename": "",
+    "url": ""
+  },
+  "release_date": "2026-06-02 09:00:00",
+  "references": [
+    {
+      "accession": "GCF_040931645.1",
+      "organism": "Klebsiella pneumoniae",
+      "assembly_name": "Kp5",
+      "source": "NCBI Assembly / Datasets",
+      "note": "Complete assembly page available via NCBI Datasets."
+    },
+    {
+      "accession": "GCF_009035845.1",
+      "organism": "Acinetobacter baumannii",
+      "assembly_name": "ASM903584v1",
+      "source": "NCBI Assembly / Datasets",
+      "note": "Closed reference suitable for generating hybrid read simulations."
+    }
+  ],
+  "notes": [
+    "Replace this scaffold with the final released challenge metadata once the simulated reads and sample sheet are uploaded.",
+    "Challenge files should use the same naming convention as practice files so the upload script can publish helper download scripts automatically."
+  ]
+}

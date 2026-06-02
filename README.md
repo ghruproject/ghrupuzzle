@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GHRUPuzzles
 
-## Getting Started
+Next.js site for publishing controlled microbial genomics exercises.
 
-First, run the development server:
+## Exercises
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Short-read assembly
+- Hybrid assembly with simulated short and long reads
+- Genotyping
+- Outbreak analysis
+
+## Local Structure
+
+- `app/`: Next.js routes and UI
+- `public/*_file_details.json`: published dataset manifests consumed by the site
+- `scripts/update_dataset.py`: uploads website-ready exercise directories to R2 and refreshes manifest JSON
+- `scripts/generate_hybrid_dataset.py`: runs the local `genomepuzzle` engine and converts its output into a website-ready hybrid dataset directory
+
+## Hybrid Dataset Workflow
+
+The simulator should stay outside this repo. The expected local layout is:
+
+```text
+../genomepuzzle
+../genomepuzzle/ghru_output_dataset/hybrid_assembly_practice
+../genomepuzzle/ghru_output_dataset/hybrid_assembly_real
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Clone the generator once:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+git clone https://github.com/happykhan/genomepuzzle ../genomepuzzle
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Generate a website-ready hybrid practice dataset from the local engine:
 
-## Learn More
+```bash
+python3 scripts/generate_hybrid_dataset.py \
+  --samplelist datasets/hybrid_assembly_template.csv \
+  --engine-output-dir ../genomepuzzle/ghru_output_dataset/hybrid_assembly_work \
+  --output-dir ../genomepuzzle/ghru_output_dataset/hybrid_assembly_practice
+```
 
-To learn more about Next.js, take a look at the following resources:
+The bridge script will:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- run `genomepuzzle rapid`
+- collect the generated `*_R1.fastq.gz`, `*_R2.fastq.gz`, and `*_long.fastq.gz` files
+- rename them to anonymised public sample names
+- emit `answer_sheet.csv` and `sample_sheet.csv` in the format expected by this website
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`datasets/hybrid_assembly_template.csv` is a minimal seed file. In practice you will usually replace it with a richer accession list exported from NCBI Datasets.
 
-## Deploy on Vercel
+Upload refreshed manifests and download helpers:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+python3 scripts/update_dataset.py \
+  --hybridpath ../genomepuzzle/ghru_output_dataset/hybrid_assembly_practice \
+  --realhybridpath ../genomepuzzle/ghru_output_dataset/hybrid_assembly_real
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Hybrid directories are expected to contain:
+
+```text
+Sample_xxxxx_R1.fastq.gz
+Sample_xxxxx_R2.fastq.gz
+Sample_xxxxx_long.fastq.gz
+answer_sheet.csv
+sample_sheet.csv
+```
+
+## Dev
+
+This environment currently has no `node`/`npm` on `PATH`, so UI dependency installs and local Next.js builds need to happen in a Node-enabled shell.
