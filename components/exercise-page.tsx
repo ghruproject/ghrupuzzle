@@ -48,7 +48,7 @@ function ReferenceList({ references }: { references: ReferenceGenome[] }) {
   );
 }
 
-export function ExercisePage<TSample extends { public_name: string } & Record<string, string>>({
+export function ExercisePage<TSample extends { public_name: string }>({
   definition,
 }: {
   definition: ExerciseDefinition<TSample>;
