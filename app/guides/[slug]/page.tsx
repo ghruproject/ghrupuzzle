@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { PARTICIPANT_GUIDES, participantGuide } from '@/lib/generated-guides';
 import { GuideMarkdown } from '@/components/guide-markdown';
+import { publicPageMetadata } from '@/lib/seo';
 
 export function generateStaticParams() {
   return PARTICIPANT_GUIDES.map((guide) => ({ slug: guide.slug }));
@@ -13,10 +14,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!guide) {
     return {};
   }
-  return {
-    title: `${guide.title} | GHRU Puzzles`,
+  return publicPageMetadata({
+    title: guide.title,
     description: guide.summary,
-  };
+    path: `/guides/${guide.slug}`,
+  });
 }
 
 export default async function GuidePage({ params }: { params: Promise<{ slug: string }> }) {

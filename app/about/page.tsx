@@ -1,4 +1,12 @@
 import Image from 'next/image';
+import { publicPageMetadata } from '@/lib/seo';
+
+export const metadata = publicPageMetadata({
+  title: 'About',
+  description:
+    'Learn how GHRUPUZZLES uses complex simulated datasets to test microbial genomics proficiency and validate bioinformatics pipelines.',
+  path: '/about',
+});
 
 export default function AboutPage() {
   return (

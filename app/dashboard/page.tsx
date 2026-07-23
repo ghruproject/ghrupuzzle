@@ -7,8 +7,10 @@ import { ParticipantRecord } from '@/components/participant-record';
 import { CourseProgress } from '@/components/course-progress';
 import { ProfileCard } from '@/components/profile-card';
 import { defaultNameFromEmail } from '@/lib/profile';
+import { privatePageMetadata } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
+export const metadata = privatePageMetadata('Participant dashboard');
 
 export default async function DashboardPage() {
   const auth = await createAuth();

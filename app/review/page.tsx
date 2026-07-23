@@ -3,8 +3,10 @@ import { redirect } from 'next/navigation';
 import { createAuth } from '@/lib/auth';
 import { getEnv } from '@/lib/cloudflare';
 import { ReviewQueue } from '@/components/review-queue';
+import { privatePageMetadata } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
+export const metadata = privatePageMetadata('Review workspace');
 
 export default async function ReviewPage() {
   const session = await (await createAuth()).api.getSession({ headers: await headers() });

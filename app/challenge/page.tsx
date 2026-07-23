@@ -4,8 +4,16 @@ import { getEnv } from '@/lib/cloudflare';
 import { loadPublicChallengeSchedule } from '@/lib/challenge-data';
 import { phaseLabel, type PublicChallengeRound } from '@/lib/challenge';
 import { PRACTICE_EXERCISES } from '@/lib/practice-exercises';
+import { publicPageMetadata } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
+export const metadata = publicPageMetadata({
+  title: 'Challenge',
+  description:
+    'View upcoming microbial genomics challenge dates, sign up to participate and register for an opening-day reminder.',
+  path: '/challenge',
+  keywords: ['microbial genomics challenge', 'bioinformatics proficiency assessment'],
+});
 
 const dateTimeFormatter = new Intl.DateTimeFormat('en-GB', {
   dateStyle: 'medium',

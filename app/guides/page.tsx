@@ -1,10 +1,14 @@
 import Link from 'next/link';
 import { PARTICIPANT_GUIDES } from '@/lib/generated-guides';
+import { publicPageMetadata } from '@/lib/seo';
 
-export const metadata = {
-  title: 'Participant guides | GHRU Puzzles',
-  description: 'Practical guidance for completing the GHRU Puzzles microbial genomics exercises.',
-};
+export const metadata = publicPageMetadata({
+  title: 'Participant guides',
+  description:
+    'Installation guidance and runnable command examples for completing microbial genomics assembly, genotyping and outbreak-analysis exercises.',
+  path: '/guides',
+  keywords: ['bioinformatics installation guide', 'microbial genomics commands'],
+});
 
 export default function GuidesPage() {
   return (

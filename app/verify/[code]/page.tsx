@@ -1,6 +1,8 @@
 import { getEnv } from '@/lib/cloudflare';
+import { privatePageMetadata } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
+export const metadata = privatePageMetadata('Certificate verification');
 
 export default async function VerifyCertificatePage({
   params,

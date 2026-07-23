@@ -1,4 +1,13 @@
 import { PracticeCards } from '@/components/practice-cards';
+import { publicPageMetadata } from '@/lib/seo';
+
+export const metadata = publicPageMetadata({
+  title: 'Microbial genomics practice exercises',
+  description:
+    'Preview tasks, download simulated microbial genomics datasets and test bioinformatics workflows before submitting results for assessment.',
+  path: '/practice',
+  keywords: ['microbial genomics practice', 'bioinformatics exercises', 'pipeline benchmarking'],
+});
 
 export default function PracticePage() {
   return (
