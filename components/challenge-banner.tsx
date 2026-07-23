@@ -45,14 +45,14 @@ export function ChallengeBanner() {
           </strong>{' '}
           {isOpen
             ? 'Sign in to start or continue your submissions.'
-            : 'Sign up to take part, register for a reminder, or practise now.'}
+            : 'Sign up to take part and receive an email when it opens, or practise now.'}
         </p>
         <div className="flex items-center gap-2">
           <Link
             className="gx-btn gx-btn-primary"
-            href={isOpen ? '/sign-in?returnTo=%2Fdashboard' : '/challenge#reminder'}
+            href="/sign-in?returnTo=%2Fdashboard"
           >
-            {isOpen ? 'Start challenge' : 'Register for reminder'}
+            {isOpen ? 'Start challenge' : 'Sign up'}
           </Link>
           <button
             className="gx-btn gx-btn-secondary"

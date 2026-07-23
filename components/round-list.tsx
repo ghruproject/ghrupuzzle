@@ -52,7 +52,7 @@ export function RoundList() {
   async function signUp(roundId: string) {
     setMessage('');
     const response = await fetch(`/api/rounds/${roundId}/enrol`, { method: 'POST' });
-    const result = (await response.json()) as { error?: string };
+    const result = (await response.json()) as { error?: string; openingReminder?: boolean };
     if (!response.ok) {
       setMessage(result.error ?? 'Challenge signup failed.');
       return;
@@ -62,14 +62,19 @@ export function RoundList() {
         round.id === roundId ? { ...round, enrolment_status: 'active' } : round,
       ),
     );
-    setMessage('You are signed up.');
+    setMessage(
+      result.openingReminder
+        ? 'You are signed up. We will email you when the challenge opens.'
+        : 'You are signed up.',
+    );
   }
 
   return (
     <section className="card h-full">
       <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-2">Challenge calendar</h2>
       <p className="text-sm text-[var(--gx-text-muted)] mt-0 mb-4">
-        Published challenge dates and your signup status.
+        Published challenge dates and your signup status. Signing up for an upcoming challenge
+        includes one opening-day email.
       </p>
       {orderedRounds.length ? (
         <div className="divide-y divide-[var(--gx-border)]">

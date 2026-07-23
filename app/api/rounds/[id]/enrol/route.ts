@@ -10,7 +10,7 @@ export async function POST(
     const user = await requireUser(request);
     const { id } = await context.params;
     const round = await env.DB.prepare(
-      `SELECT id, registration_mode, registration_opens_at, opens_at, closes_at, status
+      `SELECT id, slug, registration_mode, registration_opens_at, opens_at, closes_at, status
          FROM assessment_round WHERE id = ?`,
     )
       .bind(id)
@@ -39,6 +39,7 @@ export async function POST(
       invitationId = invitation.id;
     }
     const enrolmentId = crypto.randomUUID();
+    const openingReminder = now < new Date(String(round.opens_at));
     const statements = [
       env.DB.prepare(
         `INSERT INTO enrolment (id, round_id, user_id)
@@ -48,8 +49,22 @@ export async function POST(
       env.DB.prepare(
         `INSERT INTO audit_event (id, actor_user_id, action, target_type, target_id, after_json)
          VALUES (?, ?, 'enrolment.created', 'assessment_round', ?, ?)`,
-      ).bind(crypto.randomUUID(), user.id, id, JSON.stringify({ enrolmentId })),
+      ).bind(
+        crypto.randomUUID(),
+        user.id,
+        id,
+        JSON.stringify({ enrolmentId, openingReminder }),
+      ),
     ];
+    if (openingReminder) {
+      statements.push(
+        env.DB.prepare(
+          `INSERT INTO challenge_notification_subscription (id, challenge_slug, email)
+           VALUES (?, ?, ?)
+           ON CONFLICT(challenge_slug, email) DO UPDATE SET updated_at = CURRENT_TIMESTAMP`,
+        ).bind(crypto.randomUUID(), String(round.slug), user.email),
+      );
+    }
     if (invitationId) {
       statements.push(
         env.DB.prepare(
@@ -60,7 +75,7 @@ export async function POST(
       );
     }
     await env.DB.batch(statements);
-    return Response.json({ roundId: id, status: 'active' }, { status: 201 });
+    return Response.json({ roundId: id, status: 'active', openingReminder }, { status: 201 });
   } catch (error) {
     return jsonError(error);
   }

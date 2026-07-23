@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { ChallengeNotificationForm } from '@/components/challenge-notification-form';
 import { getEnv } from '@/lib/cloudflare';
 import { loadPublicChallengeSchedule } from '@/lib/challenge-data';
 import { phaseLabel, type PublicChallengeRound } from '@/lib/challenge';
@@ -10,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = publicPageMetadata({
   title: 'Challenge',
   description:
-    'View upcoming microbial genomics challenge dates, sign up to participate and register for an opening-day reminder.',
+    'View upcoming microbial genomics challenge dates, sign up to participate and receive an opening-day reminder.',
   path: '/challenge',
   keywords: ['microbial genomics challenge', 'bioinformatics proficiency assessment'],
 });
@@ -41,9 +40,9 @@ function ChallengeAction({ challenge }: { challenge: PublicChallengeRound }) {
     );
   }
   return (
-    <a className="gx-btn gx-btn-primary" href="#reminder">
-      Register for a reminder
-    </a>
+    <Link className="gx-btn gx-btn-primary" href="/sign-in?returnTo=%2Fdashboard">
+      View challenge signup
+    </Link>
   );
 }
 
@@ -75,6 +74,11 @@ export default async function ChallengePage() {
               submissions are assessed and recorded in your participant dashboard.
             </p>
             <ChallengeAction challenge={featured} />
+            {featured.phase === 'upcoming' ? (
+              <p className="text-sm text-[var(--gx-text-muted)] mt-4 mb-0">
+                Sign up once and we will email you when the challenge opens.
+              </p>
+            ) : null}
           </>
         ) : (
           <p className="text-lg text-[var(--gx-text-muted)] max-w-3xl mb-0">
@@ -83,18 +87,6 @@ export default async function ChallengePage() {
           </p>
         )}
       </section>
-
-      {featured?.phase === 'upcoming' ? (
-        <section id="reminder" className="card mb-8 scroll-mt-24">
-          <h2 className="text-2xl font-bold text-[var(--gx-text)] mt-0 mb-3">
-            Get an opening-day reminder
-          </h2>
-          <p className="text-[var(--gx-text-muted)] mb-5">
-            Register an email address and we will send one message when {featured.title} opens.
-          </p>
-          <ChallengeNotificationForm challenge={featured} />
-        </section>
-      ) : null}
 
       <section className="card mb-8">
         <h2 className="text-2xl font-bold text-[var(--gx-text)] mt-0 mb-3">
