@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 
 from scripts.publish_release import (
+    bundle_sha256,
     build_private_upload_plan,
     build_upload_plan,
     load_and_validate_release,
@@ -58,10 +59,12 @@ class ManifestPublisherTests(unittest.TestCase):
         fasta.write_text(">contig\nACGT\n", encoding="utf-8")
         digest = hashlib.sha256(fasta.read_bytes()).hexdigest()
         manifest = {
-            "schema_version": "1.0",
+            "schema_version": "2.0",
             "release_id": "2026-round-1-typing-practice",
             "exercise": "typing",
             "mode": "practice",
+            "title": "Typing practice",
+            "description": "Fixture",
             "samples": [
                 {
                     "sample_id": "Sample_abc123",
@@ -76,13 +79,49 @@ class ManifestPublisherTests(unittest.TestCase):
                 }
             ],
         }
-        (release / "public" / "dataset_manifest.json").write_text(
+        (release / "public" / "manifest.json").write_text(
             json.dumps(manifest), encoding="utf-8"
         )
+        for name, content in (
+            ("sample_sheet.csv", "sample_id,st\nSample_abc123,\n"),
+            ("submission_schema.json", '{"schema_version":"2.0"}'),
+            ("instructions.md", "# Fixture\n"),
+            ("checksums.sha256", "{}  public/files/{}\n".format(digest, fasta.name)),
+        ):
+            (release / "public" / name).write_text(content, encoding="utf-8")
         private = release / "private"
         private.mkdir()
-        for name in ("answer_key.json", "provenance.json", "implant_manifest.json"):
+        for name in (
+            "answer_key.json",
+            "provenance.json",
+            "implant_manifest.json",
+            "scoring_policy.json",
+            "validation_report.json",
+        ):
             (private / name).write_text("{}", encoding="utf-8")
+        release_id = manifest["release_id"]
+        (release / "release.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": "2.0",
+                    "release_id": release_id,
+                    "exercise": "typing",
+                    "mode": "practice",
+                }
+            ),
+            encoding="utf-8",
+        )
+        (release / "COMPLETE.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": "2.0",
+                    "release_id": release_id,
+                    "status": "complete",
+                    "bundle_sha256": bundle_sha256(release),
+                }
+            ),
+            encoding="utf-8",
+        )
         return release
 
     def test_manifest_publisher_uses_release_prefix_and_manifest_last(self):
@@ -111,7 +150,7 @@ class ManifestPublisherTests(unittest.TestCase):
     def test_manifest_publisher_rejects_private_truth(self):
         with tempfile.TemporaryDirectory() as directory:
             release = self.make_release(directory)
-            manifest_path = release / "public" / "dataset_manifest.json"
+            manifest_path = release / "public" / "manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["samples"][0]["expected_answers"] = {"st": "ST42"}
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
@@ -123,6 +162,10 @@ class ManifestPublisherTests(unittest.TestCase):
             release = self.make_release(directory)
             fasta = release / "public" / "files" / "Sample_abc123.fasta"
             fasta.write_text(">contig\nTGCA\n", encoding="utf-8")
+            complete_path = release / "COMPLETE.json"
+            complete = json.loads(complete_path.read_text(encoding="utf-8"))
+            complete["bundle_sha256"] = bundle_sha256(release)
+            complete_path.write_text(json.dumps(complete), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "checksum mismatch"):
                 load_and_validate_release(release)
 
@@ -131,7 +174,7 @@ class ManifestPublisherTests(unittest.TestCase):
             release = self.make_release(directory)
             validated = load_and_validate_release(release)
             plan = build_private_upload_plan(validated)
-        self.assertEqual(len(plan), 3)
+        self.assertEqual(len(plan), 5)
         self.assertTrue(
             all("/typing/practice/private/" in item["key"] for item in plan)
         )

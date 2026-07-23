@@ -63,6 +63,7 @@ The legacy `scripts/update_dataset.py` must not be used for new releases.
 
 - [Assessment platform design](docs/assessment-platform-plan.md)
 - [Deployment and operations](docs/deployment-and-operations.md)
+- [GenomePuzzle release contract](docs/genomepuzzle-contract.md)
 
 Production provisioning, OAuth credentials, Postmark webhooks, and the first
 pilot remain external operational steps; no live services are changed by a

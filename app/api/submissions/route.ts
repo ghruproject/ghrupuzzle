@@ -1,6 +1,10 @@
 import { getEnv } from '@/lib/cloudflare';
 import { jsonError, requireReleaseAccess, requireUser, safeFilename } from '@/lib/assessment';
-import { scoreSubmission, type AnswerKey } from '@/lib/scoring';
+import {
+  scoreSubmission,
+  type AnswerKey,
+  type ScoringPolicy,
+} from '@/lib/scoring';
 
 const MAX_SUBMISSION_BYTES = 10 * 1024 * 1024;
 
@@ -37,7 +41,15 @@ export async function POST(request: Request): Promise<Response> {
       throw new Error(`Private answer key is missing for release ${release.id}`);
     }
     const answerKey = (await answerObject.json()) as AnswerKey;
-    const score = scoreSubmission(csvText, answerKey);
+    const policyKey = release.answerKey.replace(/answer_key\.json$/, 'scoring_policy.json');
+    const policyObject = await env.PRIVATE_ASSETS.get(policyKey);
+    const policy = policyObject
+      ? ((await policyObject.json()) as ScoringPolicy)
+      : undefined;
+    if (policy && policy.release_id !== answerKey.release_id) {
+      throw new Error(`Scoring policy does not match release ${release.id}`);
+    }
+    const score = scoreSubmission(csvText, answerKey, policy);
     const submissionId = crypto.randomUUID();
     const scoreId = crypto.randomUUID();
     const filename = safeFilename(upload.name);
@@ -74,10 +86,11 @@ export async function POST(request: Request): Promise<Response> {
         env.DB.prepare(
           `INSERT INTO score
              (id, submission_id, scorer_version, earned, possible, passed, provisional, details_json)
-           VALUES (?, ?, 'exact-v1', ?, ?, ?, 1, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, 1, ?)`,
         ).bind(
           scoreId,
           submissionId,
+          policy?.scorer_version ?? 'exact-v1',
           score.earned,
           score.possible,
           score.passed ? 1 : 0,

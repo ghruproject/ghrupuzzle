@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { parseCsv, scoreSubmission, type AnswerKey } from '../lib/scoring';
+import {
+  parseCsv,
+  scoreSubmission,
+  type AnswerKey,
+  type ScoringPolicy,
+} from '../lib/scoring';
 
 const answerKey: AnswerKey = {
   schema_version: '1.0',
@@ -79,4 +84,79 @@ test('carbapenemase lists are order independent', () => {
   };
   const score = scoreSubmission('sample,bla_carb\nSample_a,"blaKPC,blaNDM"\n', genes);
   assert.equal(score.passed, true);
+});
+
+test('v2 policy controls aliases, fields, threshold, and unexpected samples', () => {
+  const policy: ScoringPolicy = {
+    schema_version: '2.0',
+    release_id: answerKey.release_id,
+    scorer_version: '2.0',
+    pass_threshold: 0.75,
+    require_all_samples: true,
+    reject_unexpected_samples: true,
+    fields: [
+      {
+        name: 'st',
+        scored: true,
+        scorer: 'exact',
+        weight: 2,
+        aliases: ['sequence_type'],
+      },
+      {
+        name: 'k_locus',
+        scored: false,
+        scorer: 'exact',
+        weight: 1,
+        aliases: [],
+      },
+    ],
+  };
+  const score = scoreSubmission(
+    'sample_id,sequence_type\nSample_a,15\nSample_b,307\nExtra,1\n',
+    answerKey,
+    policy,
+  );
+  assert.equal(score.earned, 2);
+  assert.equal(score.possible, 2);
+  assert.equal(score.passed, false);
+  assert.deepEqual(score.unexpectedSamples, ['Extra']);
+});
+
+test('v2 partition weight does not grow quadratically', () => {
+  const outbreak: AnswerKey = {
+    schema_version: '2.0',
+    release_id: 'outbreak',
+    exercise: 'outbreak',
+    mode: 'practice',
+    samples: [
+      { sample_id: 'A', answers: { cluster: '1' } },
+      { sample_id: 'B', answers: { cluster: '1' } },
+      { sample_id: 'C', answers: { cluster: '2' } },
+      { sample_id: 'D', answers: { cluster: '2' } },
+    ],
+  };
+  const policy: ScoringPolicy = {
+    schema_version: '2.0',
+    release_id: 'outbreak',
+    scorer_version: '2.0',
+    pass_threshold: 0.8,
+    require_all_samples: true,
+    reject_unexpected_samples: true,
+    fields: [
+      {
+        name: 'cluster',
+        scored: true,
+        scorer: 'partition',
+        weight: 1,
+        aliases: [],
+      },
+    ],
+  };
+  const score = scoreSubmission(
+    'sample_id,cluster\nA,X\nB,X\nC,Y\nD,Y\n',
+    outbreak,
+    policy,
+  );
+  assert.ok(Math.abs(score.possible - 1) < 1e-9);
+  assert.ok(Math.abs(score.earned - 1) < 1e-9);
 });

@@ -104,8 +104,15 @@ last. Existing differing objects are refused unless `--force` is explicit,
 and there is no deletion path.
 
 Register the uploaded release through `POST /api/admin/releases`. Challenge
-releases require a round ID; practice releases must omit it. The API derives
-the exact manifest and private answer-key keys used by the publisher.
+releases require a round ID; practice releases must omit it. Registration
+loads `release.json`, `COMPLETE.json`, the public manifest, submission schema
+and sample sheet from R2. It refuses missing artifacts or metadata that differ
+from the request, then derives the exact private answer and scoring-policy
+keys used at submission time.
+
+Only GenomePuzzle contract v2 releases are accepted. Exercise instructions,
+participant columns, scorer configuration and pass threshold come from the
+release bundle; do not reproduce them in deployment configuration.
 
 ## Run a challenge
 

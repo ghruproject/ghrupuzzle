@@ -11,17 +11,38 @@ export async function GET(
     const { id } = await context.params;
     const release = await requireReleaseAccess(env, id, user.id, 'download');
     const bucket = release.mode === 'practice' ? env.PRACTICE_ASSETS : env.PRIVATE_ASSETS;
-    const object = await bucket.get(release.manifestKey);
-    if (!object) {
+    const prefix = release.manifestKey.slice(0, release.manifestKey.lastIndexOf('/'));
+    const [object, submissionObject, instructionsObject] = await Promise.all([
+      bucket.get(release.manifestKey),
+      bucket.get(`${prefix}/submission_schema.json`),
+      bucket.get(`${prefix}/instructions.md`),
+    ]);
+    if (!object || !submissionObject || !instructionsObject) {
       return Response.json({ error: 'Release manifest is unavailable' }, { status: 503 });
     }
     const manifest = (await object.json()) as {
+      title: string;
+      description: string;
       samples: Array<{
         sample_id: string;
         files: Record<string, { filename: string }>;
         metadata?: Record<string, unknown>;
       }>;
     };
+    const submission = (await submissionObject.json()) as {
+      fields: Array<{
+        name: string;
+        label: string;
+        description: string;
+        required: boolean;
+        scored: boolean;
+      }>;
+    };
+    const instructionText = await instructionsObject.text();
+    const instructions = instructionText
+      .split(/\r?\n/)
+      .map((line) => line.match(/^\d+\.\s+(.+)$/)?.[1])
+      .filter((line): line is string => Boolean(line));
     const fileUrl = (filename: string) =>
       `/api/releases/${encodeURIComponent(release.id)}/files/${encodeURIComponent(filename)}`;
     const samples = manifest.samples.map((sample) => {
@@ -45,6 +66,12 @@ export async function GET(
         url: fileUrl('sample_sheet.csv'),
       },
       release_date: release.opensAt,
+      releaseDefinition: {
+        title: manifest.title,
+        description: manifest.description,
+        instructions,
+        fields: submission.fields,
+      },
       access: {
         releaseDatabaseId: release.id,
         mode: release.mode,
