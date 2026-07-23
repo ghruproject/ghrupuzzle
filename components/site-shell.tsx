@@ -5,6 +5,8 @@ import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { usePathname, useRouter } from 'next/navigation';
 import { NavBar } from '@genomicx/ui';
+import { authClient } from '@/lib/auth-client';
+import { ChallengeBanner } from './challenge-banner';
 
 // Bridges react-router-dom navigation (used by @genomicx/ui NavBar) to Next.js router.
 function RouterSyncer() {
@@ -39,27 +41,37 @@ function PuzzleIcon() {
 
 function ExerciseLinks({ mobile = false }: { mobile?: boolean }) {
   const className = mobile ? 'gx-nav-dropdown-link' : 'gx-nav-link';
+  const { data: session, isPending } = authClient.useSession();
+  const router = useRouter();
+
+  async function signOut() {
+    await authClient.signOut();
+    router.push('/');
+    router.refresh();
+  }
 
   return (
     <>
-      <Link href="/assembly" className={className}>
-        Assembly
+      <Link href="/practice" className={className}>
+        Practice
       </Link>
-      <Link href="/hybrid-assembly" className={className}>
-        Hybrid
+      <Link href="/challenge" className={className}>
+        2026 Challenge
       </Link>
-      <Link href="/typing" className={className}>
-        Typing
-      </Link>
-      <Link href="/outbreak" className={className}>
-        Outbreak
-      </Link>
-      <Link href="/dashboard" className={className}>
-        Dashboard
-      </Link>
-      <Link href="/sign-in" className={className}>
-        Sign in
-      </Link>
+      {!isPending && session ? (
+        <>
+          <Link href="/dashboard" className={className}>
+            Dashboard
+          </Link>
+          <button type="button" className={className} onClick={signOut}>
+            Sign out
+          </button>
+        </>
+      ) : !isPending ? (
+        <Link href="/sign-in" className={className}>
+          Sign in
+        </Link>
+      ) : null}
     </>
   );
 }
@@ -95,6 +107,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
           actions={<ExerciseLinks />}
           mobileActions={<ExerciseLinks mobile />}
         />
+        <ChallengeBanner />
         <main style={{ flex: 1 }}>{children}</main>
         <footer className="gx-footer">
           <div className="gx-footer-inner">

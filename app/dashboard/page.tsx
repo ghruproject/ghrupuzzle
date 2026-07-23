@@ -21,11 +21,12 @@ export default async function DashboardPage() {
           Welcome, {session.user.name || session.user.email}
         </h1>
         <p className="text-lg text-[var(--gx-text-muted)] max-w-3xl mb-5">
-          Practice datasets remain available at any time. Challenge availability and deadlines are
-          checked by the server for your enrolments.
+          Continue a practice exercise, submit results for feedback, register for the August
+          challenge, and access your assessment record and certificates.
         </p>
         <div className="flex flex-wrap gap-3 mt-4">
-          <Link href="/assembly/practice" className="gx-btn gx-btn-primary">Open practice exercises</Link>
+          <Link href="/practice" className="gx-btn gx-btn-primary">Open practice exercises</Link>
+          <Link href="/challenge" className="gx-btn gx-btn-secondary">View 2026 Challenge</Link>
         </div>
       </section>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { ExerciseDataset, ExerciseDefinition, ReferenceGenome } from '@/lib/exercises';
 import { SubmissionPanel } from './submission-panel';
+import { NEXT_CHALLENGE } from '@/lib/challenge';
 
 function isReleased(releaseDate?: string) {
   if (!releaseDate) {
@@ -12,16 +13,6 @@ function isReleased(releaseDate?: string) {
 
   const normalized = releaseDate.includes('T') ? releaseDate : releaseDate.replace(' ', 'T');
   return Date.now() >= new Date(normalized).getTime();
-}
-
-function formatReleaseDate(releaseDate?: string) {
-  if (!releaseDate) {
-    return 'not scheduled';
-  }
-
-  const normalized = releaseDate.includes('T') ? releaseDate : releaseDate.replace(' ', 'T');
-  const parsed = new Date(normalized);
-  return Number.isNaN(parsed.getTime()) ? releaseDate : parsed.toLocaleString();
 }
 
 function fileNameFromUrl(value: string) {
@@ -60,14 +51,30 @@ export function ExercisePage<TSample extends { public_name: string }>({
 }: {
   definition: ExerciseDefinition<TSample>;
 }) {
-  const [dataset, setDataset] = useState<ExerciseDataset<TSample> | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [dataset, setDataset] = useState<ExerciseDataset<TSample> | null>(
+    definition.mode === 'challenge'
+      ? {
+          samples: [],
+          answer_sheet: { species: [] },
+          sample_sheet: { url: '' },
+        } as ExerciseDataset<TSample>
+      : null,
+  );
+  const [loading, setLoading] = useState(definition.mode === 'practice');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
 
     async function loadDataset() {
+      if (definition.mode === 'practice') {
+        const legacyResponse = await fetch(definition.datasetPath);
+        if (!legacyResponse.ok) {
+          throw new Error(`Failed to fetch ${definition.datasetPath}`);
+        }
+        return legacyResponse.json() as Promise<ExerciseDataset<TSample>>;
+      }
+
       const releasesResponse = await fetch(
         `/api/releases?exercise=${definition.exercise}&mode=${definition.mode}`,
       );
@@ -86,19 +93,11 @@ export function ExercisePage<TSample extends { public_name: string }>({
         }
       }
 
-      if (definition.mode === 'challenge') {
-        return {
-          samples: [],
-          answer_sheet: { species: [] },
-          sample_sheet: { url: '' },
-        } as ExerciseDataset<TSample>;
-      }
-
-      const legacyResponse = await fetch(definition.datasetPath);
-      if (!legacyResponse.ok) {
-        throw new Error(`Failed to fetch ${definition.datasetPath}`);
-      }
-      return legacyResponse.json() as Promise<ExerciseDataset<TSample>>;
+      return {
+        samples: [],
+        answer_sheet: { species: [] },
+        sample_sheet: { url: '' },
+      } as ExerciseDataset<TSample>;
     }
 
     loadDataset()
@@ -124,8 +123,11 @@ export function ExercisePage<TSample extends { public_name: string }>({
     };
   }, [definition.datasetPath, definition.exercise, definition.mode]);
 
-  const releaseReady = useMemo(() => isReleased(dataset?.release_date), [dataset?.release_date]);
   const hasSamples = (dataset?.samples.length ?? 0) > 0;
+  const releaseReady = useMemo(
+    () => hasSamples && isReleased(dataset?.release_date),
+    [dataset?.release_date, hasSamples],
+  );
   const hasSampleSheet = Boolean(dataset?.sample_sheet?.url);
   const canDownload = hasSamples && hasSampleSheet;
   const downloadPrefix = definition.downloadPrefix;
@@ -155,9 +157,11 @@ export function ExercisePage<TSample extends { public_name: string }>({
           <span className="inline-flex items-center px-3 py-1 rounded-full border border-[var(--gx-border)] bg-[var(--gx-accent-dim)] text-[var(--gx-text-bright)] text-xs font-semibold">
             {definition.mode === 'challenge' ? 'Challenge' : 'Practice'}
           </span>
-          <span className="inline-flex items-center px-3 py-1 rounded-full border border-[var(--gx-border)] bg-[var(--gx-accent-dim)] text-[var(--gx-text-bright)] text-xs font-semibold">
-            Dataset: {loading ? 'loading' : dataset?.samples.length ?? 0} samples
-          </span>
+          {definition.mode === 'practice' || hasSamples ? (
+            <span className="inline-flex items-center px-3 py-1 rounded-full border border-[var(--gx-border)] bg-[var(--gx-accent-dim)] text-[var(--gx-text-bright)] text-xs font-semibold">
+              Dataset: {loading ? 'loading' : dataset?.samples.length ?? 0} samples
+            </span>
+          ) : null}
           {dataset?.answer_sheet?.species?.length ? (
             <span className="inline-flex items-center px-3 py-1 rounded-full border border-[var(--gx-border)] bg-[var(--gx-accent-dim)] text-[var(--gx-text-bright)] text-xs font-semibold">
               Expected species: {dataset.answer_sheet.species.join(', ')}
@@ -175,7 +179,7 @@ export function ExercisePage<TSample extends { public_name: string }>({
           </div>
         ) : definition.mode === 'practice' ? (
           <div className="mt-4 text-sm text-[var(--gx-text-muted)]">
-            This is the practice set — lower stakes, same workflow.
+            No account is required to view the instructions or download the practice data.
           </div>
         ) : null}
       </section>
@@ -193,21 +197,29 @@ export function ExercisePage<TSample extends { public_name: string }>({
       {/* Locked challenge */}
       {!loading && !error && definition.mode === 'challenge' && !releaseReady ? (
         <div className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-surface)] p-6 mb-6">
-          <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">Challenge locked</h2>
+          <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">
+            Challenge opens {NEXT_CHALLENGE.dateLabel}
+          </h2>
           <p className="text-[var(--gx-text-muted)]">
-            The challenge dataset will be available on <strong>{formatReleaseDate(dataset?.release_date)}</strong>.
+            Challenge data and submissions are available to signed-in, enrolled participants during
+            the challenge window. You can prepare now using the public practice version.
           </p>
-          {definition.practiceHref ? (
-            <div className="flex flex-wrap gap-3 mt-4">
+          <div className="flex flex-wrap gap-3 mt-4">
+            {definition.practiceHref ? (
               <Link
                 href={definition.practiceHref}
-                className="inline-flex items-center justify-center px-4 py-3 rounded-xl font-bold text-[var(--gx-text-inverted)] hover:opacity-90 transition-opacity"
-                style={{ background: 'var(--gx-gradient)' }}
+                className="gx-btn gx-btn-primary"
               >
                 Open practice exercise
               </Link>
-            </div>
-          ) : null}
+            ) : null}
+            <Link href="/challenge#reminder" className="gx-btn gx-btn-secondary">
+              Register for opening reminder
+            </Link>
+            <Link href="/sign-in?returnTo=%2Fdashboard" className="gx-btn gx-btn-secondary">
+              Sign in or create an account
+            </Link>
+          </div>
         </div>
       ) : null}
 
@@ -328,7 +340,11 @@ export function ExercisePage<TSample extends { public_name: string }>({
             ) : null}
           </section>
 
-          <SubmissionPanel exercise={definition.exercise} mode={definition.mode} />
+          <SubmissionPanel
+            exercise={definition.exercise}
+            mode={definition.mode}
+            datasetAvailable={canDownload}
+          />
 
           {/* Samples — full width */}
           <section className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-surface)] p-6 md:col-span-2">

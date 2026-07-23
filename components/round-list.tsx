@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 const dateTimeFormatter = new Intl.DateTimeFormat('en-GB', {
@@ -62,7 +63,16 @@ export function RoundList() {
             </article>
           ))}
         </div>
-      ) : <p className="text-[var(--gx-text-muted)]">No challenge rounds are currently published.</p>}
+      ) : (
+        <div className="flex flex-col gap-3">
+          <p className="text-[var(--gx-text-muted)] m-0">
+            The next challenge runs 17–31 August 2026. Participant enrolment will appear here when registration opens.
+          </p>
+          <Link className="gx-btn gx-btn-secondary self-start" href="/challenge#reminder">
+            Register for opening reminder
+          </Link>
+        </div>
+      )}
       {message ? <p role="status" className="text-[var(--gx-text-muted)]">{message}</p> : null}
     </section>
   );

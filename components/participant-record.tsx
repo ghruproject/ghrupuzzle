@@ -100,7 +100,11 @@ export function ParticipantRecord() {
               </tbody>
             </table>
           </div>
-        ) : <p className="text-[var(--gx-text-muted)]">No submissions yet.</p>}
+        ) : (
+          <p className="text-[var(--gx-text-muted)]">
+            No submissions yet. Choose a <Link href="/practice">practice exercise</Link> to get started.
+          </p>
+        )}
       </section>
       <section className="card">
         <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">Your certificates</h2>
@@ -115,7 +119,11 @@ export function ParticipantRecord() {
               </div>
             )}
           </article>
-        )) : <p className="text-[var(--gx-text-muted)]">No certificates issued yet.</p>}
+        )) : (
+          <p className="text-[var(--gx-text-muted)]">
+            Official certificates will appear here after a completed challenge has been assessed.
+          </p>
+        )}
       </section>
     </>
   );

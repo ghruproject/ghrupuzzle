@@ -29,7 +29,8 @@ npm run db:migrate:remote
 
 The migrations create Better Auth tables, database-backed rate limits,
 rounds, releases, invitations, enrolments, submissions, scores, reviews,
-certificates, email-delivery events, roles, and audit events.
+certificates, challenge-notification registrations, email-delivery events,
+roles, and audit events.
 
 ## Configure secrets
 
@@ -53,6 +54,18 @@ Authorization: Bearer POSTMARK_WEBHOOK_SECRET
 ```
 
 Postmark link and open tracking are disabled for sign-in messages.
+
+## Challenge opening reminders
+
+The public challenge page stores explicit one-off reminder registrations in
+D1. The Worker has a daily `08:00 UTC` Cron Trigger. While the challenge is
+open, the scheduled handler sends Postmark reminders to registrations that do
+not yet have a recorded delivery attempt and records the returned Postmark
+message ID. Outside the challenge window it exits without sending.
+
+The challenge window is defined once in `lib/challenge.ts`. Update that record
+and use a new slug for each future challenge so previous banner dismissals and
+registrations do not carry forward.
 
 ## Bootstrap the first administrator
 

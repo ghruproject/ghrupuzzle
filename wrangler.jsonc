@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "ghrupuzzle",
-  "main": ".open-next/worker.js",
+  "main": "custom-worker.ts",
   "compatibility_date": "2026-07-23",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
@@ -37,6 +37,9 @@
       "service": "ghrupuzzle"
     }
   ],
+  "triggers": {
+    "crons": ["0 8 * * *"]
+  },
   "vars": {
     "BETTER_AUTH_URL": "https://ghrupuzzle.vercel.app",
     "POSTMARK_FROM_EMAIL": "GHRU Puzzles <nabil@happykhan.com>"

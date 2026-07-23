@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import type { ExerciseMode } from '@/lib/exercises';
 
 interface AvailableRelease {
@@ -12,16 +13,20 @@ interface AvailableRelease {
 export function SubmissionPanel({
   exercise,
   mode,
+  datasetAvailable = true,
 }: {
   exercise: 'typing' | 'assembly' | 'hybrid' | 'outbreak';
   mode: ExerciseMode;
+  datasetAvailable?: boolean;
 }) {
   const [release, setRelease] = useState<AvailableRelease | null>(null);
-  const [authRequired, setAuthRequired] = useState(false);
+  const [authRequired, setAuthRequired] = useState(true);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
+    if (!datasetAvailable) return;
     fetch(`/api/releases?exercise=${exercise}&mode=${mode}`)
       .then(async (response) => {
         if (response.status === 401) {
@@ -31,11 +36,12 @@ export function SubmissionPanel({
         if (!response.ok) {
           throw new Error('Release availability could not be checked');
         }
+        setAuthRequired(false);
         return response.json() as Promise<{ releases: AvailableRelease[] }>;
       })
       .then((result) => setRelease(result?.releases[0] ?? null))
       .catch(() => setMessage('Release availability could not be checked.'));
-  }, [exercise, mode]);
+  }, [datasetAvailable, exercise, mode]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -67,8 +73,23 @@ export function SubmissionPanel({
   return (
     <section className="card">
       <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">Submit results</h2>
-      {authRequired ? (
-        <p><Link href="/sign-in">Sign in</Link> to submit results and receive feedback.</p>
+      {!datasetAvailable ? (
+        <p className="text-[var(--gx-text-muted)]">
+          Submission will open when this practice dataset and sample sheet are published.
+        </p>
+      ) : authRequired ? (
+        <div className="flex flex-col gap-3">
+          <p className="text-[var(--gx-text-muted)] m-0">
+            The preview and downloads are public. Sign in or create an account when you are ready
+            to submit your completed result sheet for assessment and feedback.
+          </p>
+          <Link
+            className="gx-btn gx-btn-primary self-start"
+            href={`/sign-in?returnTo=${encodeURIComponent(pathname)}`}
+          >
+            Sign in to submit
+          </Link>
+        </div>
       ) : release ? (
         <form className="flex flex-col gap-4" onSubmit={submit}>
           <label className="label" htmlFor={`${exercise}-${mode}-submission`}>Completed CSV result sheet</label>
@@ -88,7 +109,7 @@ export function SubmissionPanel({
         <p className="text-[var(--gx-text-muted)]">
           {mode === 'challenge'
             ? 'No challenge release is currently open for your account.'
-            : 'No practice release has been published yet.'}
+            : 'Assessment submissions for this practice exercise are being prepared. The preview and downloads remain available.'}
         </p>
       )}
       {message ? <p role="status" className="text-[var(--gx-text-muted)]">{message}</p> : null}
