@@ -11,6 +11,22 @@ export interface AnswerKey {
   samples: AnswerSample[];
 }
 
+export interface ScoringPolicy {
+  schema_version: string;
+  release_id: string;
+  scorer_version: string;
+  pass_threshold: number;
+  require_all_samples: boolean;
+  reject_unexpected_samples: boolean;
+  fields: Array<{
+    name: string;
+    scored: boolean;
+    scorer: 'exact' | 'unordered_list' | 'partition';
+    weight: number;
+    aliases: string[];
+  }>;
+}
+
 export interface ScoreResult {
   earned: number;
   possible: number;
@@ -23,6 +39,7 @@ export interface ScoreResult {
     correct: boolean;
     submitted: string;
     expected: string;
+    weight: number;
   }>;
 }
 
@@ -81,7 +98,11 @@ export function parseCsv(text: string): Array<Record<string, string>> {
     );
 }
 
-export function scoreSubmission(csvText: string, answerKey: AnswerKey): ScoreResult {
+export function scoreSubmission(
+  csvText: string,
+  answerKey: AnswerKey,
+  policy?: ScoringPolicy,
+): ScoreResult {
   const rows = parseCsv(csvText);
   const sampleField = SAMPLE_ID_FIELDS.find((field) => field in rows[0]);
   if (!sampleField) {
@@ -97,45 +118,85 @@ export function scoreSubmission(csvText: string, answerKey: AnswerKey): ScoreRes
   }
 
   const expectedIds = new Set(answerKey.samples.map((sample) => sample.sample_id));
+  const unexpectedSamples = [...submitted.keys()].filter((id) => !expectedIds.has(id));
   const items: ScoreResult['items'] = [];
   const missingSamples: string[] = [];
+  const policyFields = policy?.fields.filter((field) => field.scored);
   for (const sample of answerKey.samples) {
     const row = submitted.get(sample.sample_id);
     if (!row) {
       missingSamples.push(sample.sample_id);
     }
-    for (const [rawField, rawExpected] of Object.entries(sample.answers)) {
+    const expectedEntries = policyFields
+      ? policyFields
+          .filter((definition) => definition.scorer !== 'partition')
+          .map((definition) => [definition.name, sample.answers[definition.name], definition] as const)
+      : Object.entries(sample.answers).map(
+          ([name, expected]) =>
+            [name, expected, undefined] as const,
+        );
+    for (const [rawField, rawExpected, definition] of expectedEntries) {
       const field = normalizeKey(rawField);
       if (UNSCORED_FIELDS.has(field) || (answerKey.exercise === 'outbreak' && field === 'cluster')) {
         continue;
       }
       const expected = normalizeValue(rawExpected, field);
-      const actual = normalizeValue(row?.[field] ?? '', field);
+      const submittedValue = submittedField(row, field, definition?.aliases ?? []);
+      const actual = normalizeValue(submittedValue, field);
       items.push({
         sampleId: sample.sample_id,
         field,
         correct: Boolean(row) && actual === expected,
-        submitted: row?.[field] ?? '',
+        submitted: submittedValue,
         expected: String(rawExpected ?? ''),
+        weight: definition
+          ? definition.weight / answerKey.samples.length
+          : 1,
       });
     }
   }
-  if (answerKey.exercise === 'outbreak') {
-    scoreClusterPairs(answerKey, submitted, items);
+  const partitionField = policyFields?.find((field) => field.scorer === 'partition');
+  if (partitionField) {
+    scoreClusterPairs(
+      answerKey,
+      submitted,
+      items,
+      partitionField.name,
+      partitionField.aliases,
+      partitionField.weight,
+    );
+  } else if (answerKey.exercise === 'outbreak') {
+    scoreClusterPairs(answerKey, submitted, items, 'cluster', [], undefined);
   }
   if (!items.length) {
     throw new Error('answer key contains no scoreable fields');
   }
-  const earned = items.filter((item) => item.correct).length;
-  const possible = items.length;
+  const earned = items.reduce((total, item) => total + (item.correct ? item.weight : 0), 0);
+  const possible = items.reduce((total, item) => total + item.weight, 0);
+  const passThreshold = policy?.pass_threshold ?? 0.8;
+  const completeEnough = policy?.require_all_samples === false || missingSamples.length === 0;
+  const unexpectedOkay =
+    policy?.reject_unexpected_samples === false || unexpectedSamples.length === 0;
   return {
     earned,
     possible,
-    passed: earned / possible >= 0.8 && missingSamples.length === 0,
+    passed: earned / possible >= passThreshold && completeEnough && unexpectedOkay,
     missingSamples,
-    unexpectedSamples: [...submitted.keys()].filter((id) => !expectedIds.has(id)),
+    unexpectedSamples,
     items,
   };
+}
+
+function submittedField(
+  row: Record<string, string> | undefined,
+  field: string,
+  aliases: string[],
+): string {
+  if (!row) return '';
+  for (const candidate of [field, ...aliases.map(normalizeKey)]) {
+    if (candidate in row) return row[candidate];
+  }
+  return '';
 }
 
 function normalizeKey(value: string): string {
@@ -162,24 +223,33 @@ function scoreClusterPairs(
   answerKey: AnswerKey,
   submitted: Map<string, Record<string, string>>,
   items: ScoreResult['items'],
+  field: string,
+  aliases: string[],
+  totalWeight: number | undefined,
 ): void {
+  const pairCount = (answerKey.samples.length * (answerKey.samples.length - 1)) / 2;
   for (let left = 0; left < answerKey.samples.length; left += 1) {
     for (let right = left + 1; right < answerKey.samples.length; right += 1) {
       const a = answerKey.samples[left];
       const b = answerKey.samples[right];
-      const expectedA = normalizeValue(a.answers.cluster);
-      const expectedB = normalizeValue(b.answers.cluster);
-      const actualA = normalizeValue(submitted.get(a.sample_id)?.cluster ?? '');
-      const actualB = normalizeValue(submitted.get(b.sample_id)?.cluster ?? '');
+      const expectedA = normalizeValue(a.answers[field]);
+      const expectedB = normalizeValue(b.answers[field]);
+      const actualA = normalizeValue(
+        submittedField(submitted.get(a.sample_id), field, aliases),
+      );
+      const actualB = normalizeValue(
+        submittedField(submitted.get(b.sample_id), field, aliases),
+      );
       const expectedTogether = isCluster(expectedA) && expectedA === expectedB;
       const actualTogether = isCluster(actualA) && actualA === actualB;
       items.push({
         sampleId: a.sample_id,
-        field: `cluster_with_${b.sample_id}`,
+        field: `${field}_with_${b.sample_id}`,
         correct: Boolean(submitted.get(a.sample_id) && submitted.get(b.sample_id))
           && expectedTogether === actualTogether,
         submitted: actualTogether ? 'same cluster' : 'different clusters',
         expected: expectedTogether ? 'same cluster' : 'different clusters',
+        weight: totalWeight === undefined ? 1 : totalWeight / pairCount,
       });
     }
   }

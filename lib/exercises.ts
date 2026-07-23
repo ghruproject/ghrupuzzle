@@ -42,6 +42,24 @@ export interface ExerciseDataset<TSample> {
   release_date?: string;
   references?: ReferenceGenome[];
   notes?: string[];
+  releaseDefinition?: {
+    title: string;
+    description: string;
+    instructions: string[];
+    fields: Array<{
+      name: string;
+      label: string;
+      description: string;
+      required: boolean;
+      scored: boolean;
+    }>;
+  };
+  access?: {
+    releaseDatabaseId: string;
+    mode: ExerciseMode;
+    opensAt?: string | null;
+    closesAt?: string | null;
+  };
 }
 
 export interface InstructionColumn {

@@ -129,6 +129,18 @@ export function ExercisePage<TSample extends { public_name: string }>({
   const hasSampleSheet = Boolean(dataset?.sample_sheet?.url);
   const canDownload = hasSamples && hasSampleSheet;
   const downloadPrefix = definition.downloadPrefix;
+  const releaseDefinition = dataset?.releaseDefinition;
+  const pageTitle = releaseDefinition?.title ?? definition.title;
+  const pageSummary = releaseDefinition?.description ?? definition.summary;
+  const taskInstructions = releaseDefinition?.instructions.length
+    ? releaseDefinition.instructions
+    : definition.instructions;
+  const answerColumns = releaseDefinition?.fields.map((field) => ({
+    name: field.name,
+    description: `${field.description}${field.required ? ' Required.' : ' Optional.'}${
+      field.scored ? ' Scored.' : ''
+    }`,
+  })) ?? definition.answerColumns;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
@@ -137,8 +149,8 @@ export function ExercisePage<TSample extends { public_name: string }>({
         <div className="inline-flex mb-3 text-xs font-extrabold tracking-widest uppercase text-[var(--gx-accent)]">
           {definition.kindLabel}
         </div>
-        <h1 className="text-4xl font-bold leading-tight text-[var(--gx-text)] mt-0 mb-4">{definition.title}</h1>
-        <p className="text-lg text-[var(--gx-text-muted)] max-w-3xl mb-5">{definition.summary}</p>
+        <h1 className="text-4xl font-bold leading-tight text-[var(--gx-text)] mt-0 mb-4">{pageTitle}</h1>
+        <p className="text-lg text-[var(--gx-text-muted)] max-w-3xl mb-5">{pageSummary}</p>
         <div className="flex flex-wrap gap-2 mb-2">
           <span className="inline-flex items-center px-3 py-1 rounded-full border border-[var(--gx-border)] bg-[var(--gx-accent-dim)] text-[var(--gx-text-bright)] text-xs font-semibold">
             {definition.mode === 'challenge' ? 'Challenge' : 'Practice'}
@@ -207,7 +219,7 @@ export function ExercisePage<TSample extends { public_name: string }>({
             <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">Task</h2>
             <p className="text-[var(--gx-text-muted)] mb-3">{definition.subtitle}</p>
             <ul className="pl-5 list-disc space-y-2 text-[var(--gx-text-muted)] mb-3">
-              {definition.instructions.map((instruction) => (
+              {taskInstructions.map((instruction) => (
                 <li key={instruction}>{instruction}</li>
               ))}
             </ul>
@@ -231,7 +243,7 @@ export function ExercisePage<TSample extends { public_name: string }>({
                   </tr>
                 </thead>
                 <tbody>
-                  {definition.answerColumns.map((column) => (
+                  {answerColumns.map((column) => (
                     <tr key={column.name}>
                       <td className="px-4 py-3 border-b border-[var(--gx-border)] align-top text-[var(--gx-text)]">
                         {column.name}
@@ -252,7 +264,7 @@ export function ExercisePage<TSample extends { public_name: string }>({
             {canDownload ? (
               <>
                 <p className="text-[var(--gx-text-muted)] mb-4">
-                  Download the sample sheet and sequencing files directly, or use the generated shell helpers.
+                  Download the sample sheet and sequencing files directly.
                 </p>
                 <div className="flex flex-wrap gap-3 mb-4">
                   <a
@@ -264,22 +276,26 @@ export function ExercisePage<TSample extends { public_name: string }>({
                   >
                     Download sample sheet
                   </a>
-                  <a
-                    href={`/${downloadPrefix}-curl-download_samples.txt`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center px-4 py-3 rounded-xl font-bold border border-[var(--gx-border)] text-[var(--gx-text)] hover:text-[var(--gx-text-bright)] bg-transparent transition-colors text-sm"
-                  >
-                    curl helper
-                  </a>
-                  <a
-                    href={`/${downloadPrefix}-wget-download_samples.txt`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center px-4 py-3 rounded-xl font-bold border border-[var(--gx-border)] text-[var(--gx-text)] hover:text-[var(--gx-text-bright)] bg-transparent transition-colors text-sm"
-                  >
-                    wget helper
-                  </a>
+                  {!dataset?.access ? (
+                    <>
+                      <a
+                        href={`/${downloadPrefix}-curl-download_samples.txt`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center px-4 py-3 rounded-xl font-bold border border-[var(--gx-border)] text-[var(--gx-text)] hover:text-[var(--gx-text-bright)] bg-transparent transition-colors text-sm"
+                      >
+                        curl helper
+                      </a>
+                      <a
+                        href={`/${downloadPrefix}-wget-download_samples.txt`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center px-4 py-3 rounded-xl font-bold border border-[var(--gx-border)] text-[var(--gx-text)] hover:text-[var(--gx-text-bright)] bg-transparent transition-colors text-sm"
+                      >
+                        wget helper
+                      </a>
+                    </>
+                  ) : null}
                 </div>
               </>
             ) : (

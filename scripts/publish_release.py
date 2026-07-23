@@ -20,7 +20,7 @@ except ModuleNotFoundError:  # Validation and dry runs do not require upload dep
     load_dotenv = None
 
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "2.0"
 EXERCISES = {"typing", "assembly", "hybrid", "outbreak"}
 MODES = {"practice", "challenge"}
 FORBIDDEN_KEYS = {
@@ -47,6 +47,19 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def bundle_sha256(release_path: Path) -> str:
+    digest = hashlib.sha256()
+    for path in sorted(item for item in release_path.rglob("*") if item.is_file()):
+        relative = path.relative_to(release_path).as_posix()
+        if path.name in {"COMPLETE", "COMPLETE.json"} or relative.startswith("build/"):
+            continue
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(sha256_file(path).encode("ascii"))
+        digest.update(b"\n")
+    return digest.hexdigest()
+
+
 def _assert_no_private_keys(value: Any, path: str = "manifest") -> None:
     if isinstance(value, Mapping):
         for key, item in value.items():
@@ -65,7 +78,16 @@ def load_and_validate_release(release_dir):
 
     release_path = Path(release_dir).resolve()
     public_dir = release_path / "public"
-    manifest_path = public_dir / "dataset_manifest.json"
+    release_index_path = release_path / "release.json"
+    complete_path = release_path / "COMPLETE.json"
+    manifest_path = public_dir / "manifest.json"
+    for required_path in (release_index_path, complete_path, manifest_path):
+        if not required_path.is_file():
+            raise ValueError("missing release artifact: {0}".format(required_path))
+    with open(release_index_path, encoding="utf-8") as handle:
+        release_index = json.load(handle)
+    with open(complete_path, encoding="utf-8") as handle:
+        complete = json.load(handle)
     if not manifest_path.is_file():
         raise ValueError("missing public dataset manifest: {0}".format(manifest_path))
 
@@ -77,6 +99,12 @@ def load_and_validate_release(release_dir):
 
     if str(manifest.get("schema_version")) != SCHEMA_VERSION:
         raise ValueError("unsupported public manifest schema version")
+    if release_index.get("schema_version") != SCHEMA_VERSION:
+        raise ValueError("unsupported release index schema version")
+    if complete.get("status") != "complete":
+        raise ValueError("release is not complete")
+    if complete.get("bundle_sha256") != bundle_sha256(release_path):
+        raise ValueError("release content digest does not match COMPLETE.json")
     release_id = manifest.get("release_id")
     if not isinstance(release_id, str) or not release_id:
         raise ValueError("public manifest is missing release_id")
@@ -84,6 +112,12 @@ def load_and_validate_release(release_dir):
         raise ValueError("public manifest has an unsupported exercise")
     if manifest.get("mode") not in MODES:
         raise ValueError("public manifest has an unsupported mode")
+    for payload_name, payload in (
+        ("release.json", release_index),
+        ("COMPLETE.json", complete),
+    ):
+        if payload.get("release_id") != release_id:
+            raise ValueError("{0} release_id differs from manifest".format(payload_name))
 
     samples = manifest.get("samples")
     if not isinstance(samples, list) or not samples:
@@ -150,19 +184,30 @@ def load_and_validate_release(release_dir):
                 }
             )
 
-    optional_public_files = []
-    for filename in ("sample_sheet.csv", "checksums.sha256"):
+    required_public_files = []
+    for filename in (
+        "sample_sheet.csv",
+        "submission_schema.json",
+        "instructions.md",
+        "checksums.sha256",
+    ):
         path = public_dir / filename
-        if path.is_file():
-            optional_public_files.append(path)
+        if not path.is_file():
+            raise ValueError("release is missing required public file: {0}".format(filename))
+        if path.suffix == ".json":
+            with open(path, encoding="utf-8") as handle:
+                json.load(handle)
+        required_public_files.append(path)
 
     return {
         "release_dir": release_path,
         "public_dir": public_dir,
         "manifest_path": manifest_path,
         "manifest": manifest,
+        "release_index_path": release_index_path,
+        "complete_path": complete_path,
         "participant_files": resolved_files,
-        "optional_public_files": optional_public_files,
+        "required_public_files": required_public_files,
     }
 
 
@@ -192,16 +237,33 @@ def build_upload_plan(validated, public_base_url):
                 else "text/plain",
             }
         )
-    for path in validated["optional_public_files"]:
+    for path in validated["required_public_files"]:
         plan.append(
             {
                 "path": path,
                 "key": "{0}/{1}".format(prefix, path.name),
                 "sha256": sha256_file(path),
                 "size": path.stat().st_size,
-                "content_type": "text/csv"
-                if path.suffix == ".csv"
-                else "text/plain",
+                "content_type": (
+                    "application/json"
+                    if path.suffix == ".json"
+                    else "text/csv"
+                    if path.suffix == ".csv"
+                    else "text/markdown"
+                    if path.suffix == ".md"
+                    else "text/plain"
+                ),
+            }
+        )
+
+    for path in (validated["release_index_path"], validated["complete_path"]):
+        plan.append(
+            {
+                "path": path,
+                "key": "{0}/{1}".format(prefix, path.name),
+                "sha256": sha256_file(path),
+                "size": path.stat().st_size,
+                "content_type": "application/json",
             }
         )
 
@@ -241,7 +303,13 @@ def build_private_upload_plan(validated):
     """Validate and plan private truth uploads to a separate R2 bucket."""
 
     private_dir = validated["release_dir"] / "private"
-    required = {"answer_key.json", "provenance.json", "implant_manifest.json"}
+    required = {
+        "answer_key.json",
+        "provenance.json",
+        "implant_manifest.json",
+        "scoring_policy.json",
+        "validation_report.json",
+    }
     missing = sorted(name for name in required if not (private_dir / name).is_file())
     if missing:
         raise ValueError(
@@ -249,7 +317,7 @@ def build_private_upload_plan(validated):
         )
     prefix = release_prefix(validated["manifest"])
     plan = []
-    for path in sorted(private_dir.iterdir()):
+    for path in sorted(private_dir.rglob("*")):
         if not path.is_file() or path.name.startswith("."):
             continue
         if path.suffix not in {".json", ".csv", ".txt"}:
@@ -257,10 +325,11 @@ def build_private_upload_plan(validated):
         if path.suffix == ".json":
             with open(path, encoding="utf-8") as handle:
                 json.load(handle)
+        relative = path.relative_to(private_dir).as_posix()
         plan.append(
             {
                 "path": path,
-                "key": "{0}/private/{1}".format(prefix, path.name),
+                "key": "{0}/private/{1}".format(prefix, relative),
                 "sha256": sha256_file(path),
                 "size": path.stat().st_size,
                 "content_type": "application/json"
@@ -345,6 +414,7 @@ def publish_plan(
 
 
 def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     parser = argparse.ArgumentParser(
         description=(
             "Validate a GenomePuzzle public package and optionally publish it "

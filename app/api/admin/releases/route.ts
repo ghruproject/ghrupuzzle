@@ -24,8 +24,47 @@ export async function POST(request: Request): Promise<Response> {
     ) {
       return Response.json({ error: 'Release fields are invalid' }, { status: 400 });
     }
-    const id = crypto.randomUUID();
     const prefix = `releases/${body.releaseId}/${body.exercise}/${body.mode}`;
+    const bucket = body.mode === 'practice' ? env.PRACTICE_ASSETS : env.PRIVATE_ASSETS;
+    const [manifestObject, indexObject, completeObject, sampleSheet, submissionSchema] =
+      await Promise.all([
+        bucket.get(`${prefix}/dataset_manifest.json`),
+        bucket.get(`${prefix}/release.json`),
+        bucket.get(`${prefix}/COMPLETE.json`),
+        bucket.head(`${prefix}/sample_sheet.csv`),
+        bucket.head(`${prefix}/submission_schema.json`),
+      ]);
+    if (
+      !manifestObject ||
+      !indexObject ||
+      !completeObject ||
+      !sampleSheet ||
+      !submissionSchema
+    ) {
+      return Response.json(
+        { error: 'The uploaded release contract is incomplete' },
+        { status: 400 },
+      );
+    }
+    const manifest = (await manifestObject.json()) as Record<string, unknown>;
+    const index = (await indexObject.json()) as Record<string, unknown>;
+    const complete = (await completeObject.json()) as Record<string, unknown>;
+    if (
+      manifest.schema_version !== '2.0' ||
+      index.schema_version !== '2.0' ||
+      complete.status !== 'complete' ||
+      manifest.release_id !== body.releaseId ||
+      manifest.exercise !== body.exercise ||
+      manifest.mode !== body.mode ||
+      index.release_id !== body.releaseId ||
+      complete.release_id !== body.releaseId
+    ) {
+      return Response.json(
+        { error: 'Uploaded release metadata does not match the registration request' },
+        { status: 400 },
+      );
+    }
+    const id = crypto.randomUUID();
     await env.DB.batch([
       env.DB.prepare(
         `INSERT INTO dataset_release
@@ -40,7 +79,7 @@ export async function POST(request: Request): Promise<Response> {
         `${prefix}/dataset_manifest.json`,
         `${prefix}/private/answer_key.json`,
         body.roundId ?? null,
-        body.schemaVersion ?? '1.0',
+        String(manifest.schema_version),
       ),
       env.DB.prepare(
         `INSERT INTO audit_event
@@ -48,7 +87,17 @@ export async function POST(request: Request): Promise<Response> {
          VALUES (?, ?, 'release.registered', 'dataset_release', ?, ?)`,
       ).bind(crypto.randomUUID(), actor.id, id, JSON.stringify(body)),
     ]);
-    return Response.json({ id, prefix }, { status: 201 });
+    return Response.json(
+      {
+        id,
+        prefix,
+        releaseId: manifest.release_id,
+        exercise: manifest.exercise,
+        mode: manifest.mode,
+        schemaVersion: manifest.schema_version,
+      },
+      { status: 201 },
+    );
   } catch (error) {
     return jsonError(error);
   }
