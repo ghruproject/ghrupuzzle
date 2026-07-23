@@ -1,27 +1,50 @@
 import os
 import json
-import boto3
-from botocore.client import Config
 import argparse
-from dotenv import load_dotenv
 import logging
 import csv
-import random
-import string
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
 import hashlib
+
+try:
+    import boto3
+    from botocore.client import Config
+    from dotenv import load_dotenv
+except ModuleNotFoundError:  # Allows safety helpers and --help to be tested without upload deps.
+    boto3 = None
+    Config = None
+    load_dotenv = None
 
 # Set up logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
-def md5(file_path):
-    hash_md5 = hashlib.md5()
+def sha256(file_path):
+    digest = hashlib.sha256()
     with open(file_path, "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
-            hash_md5.update(chunk)
-    return hash_md5.hexdigest()
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def private_answer_summary(answer_sheet):
+    """Return only non-sensitive aggregate metadata for the public manifest."""
+    species = {
+        row.get("SPECIES") or row.get("species")
+        for row in answer_sheet
+        if row.get("SPECIES") or row.get("species")
+    }
+    return {
+        "species": sorted(species),
+    }
+
+
+def require_upload_dependencies():
+    if boto3 is None or Config is None or load_dotenv is None:
+        raise RuntimeError(
+            "Publishing requires boto3 and python-dotenv. Install the uploader "
+            "dependencies before connecting to R2."
+        )
 
 def create_download_script(type, file_details):
     script_content = "#!/bin/bash\n\n"
@@ -102,11 +125,6 @@ def fasta_create_download_script(type, file_details):
     logging.info("WGET download script created at %s", wget_script_path)
 
 
-def generate_random_string(length=8, random_seed=42):
-    random.seed(random_seed)
-    letters = string.ascii_lowercase + string.digits
-    return "".join(random.choice(letters) for i in range(length))
-
 def file_upload(s3, fastq, bucket_name, key, force):
     if force:
         s3.upload_file(fastq, bucket_name, key)
@@ -123,6 +141,7 @@ def file_upload(s3, fastq, bucket_name, key, force):
 
 
 def upload_fastq_to_r2(dataset, directory_path, dotenv, force, release_date):
+    require_upload_dependencies()
     # Load environment variables from .env file
     if not load_dotenv(dotenv):
         raise ValueError("Could not load environment variables from .env file.")
@@ -192,16 +211,14 @@ def upload_fastq_to_r2(dataset, directory_path, dotenv, force, release_date):
             key = os.path.basename(fastq)
             file_upload(s3, fastq, bucket_name, key, force)
 
-    answer_sheet_md5 = md5(answer_sheet_path)[0:20]
-    random_filename = f"{dataset}_answer_sheet_{answer_sheet_md5}.csv"
-    # Read answer sheet and get out list of included species 
-    species_list = list(set(row['SPECIES'] for row in answer_sheet))
-    # Upload answer_sheet.csv with random filename
-    s3.upload_file(answer_sheet_path, bucket_name, random_filename, ExtraArgs={'ContentDisposition': 'attachment'})
-    file_details['answer_sheet'] = { 'filename': random_filename, 'url': f'{public_url}/{random_filename}', 'species': species_list }
-    file_list.append(random_filename)
+    # Answers stay local/private. Only aggregate species metadata is safe for the
+    # legacy public manifest. The manifest-driven publisher will place answer
+    # keys in a separate private bucket.
+    file_details['answer_sheet'] = private_answer_summary(answer_sheet)
+    logging.info("Keeping %s private; it will not be uploaded to public R2", answer_sheet_path)
     # upload sample_sheet.csv
-    samplesheet_name = f"{dataset}_sample_sheet_{answer_sheet_md5[0:10]}.csv"
+    sample_sheet_sha256 = sha256(sample_sheet_path)
+    samplesheet_name = f"{dataset}_sample_sheet_{sample_sheet_sha256[0:10]}.csv"
     with open(sample_sheet_path, mode="r", encoding="utf-8") as csv_file:
         csv_reader = csv.DictReader(csv_file)
         sample_sheet = [row for row in csv_reader]
@@ -219,6 +236,7 @@ def upload_fastq_to_r2(dataset, directory_path, dotenv, force, release_date):
     return file_list
             
 def upload_fasta_to_r2(dataset, directory_path, dotenv, force, release_date):
+    require_upload_dependencies()
     # Load environment variables from .env file
     if not load_dotenv(dotenv):
         raise ValueError("Could not load environment variables from .env file.")
@@ -270,18 +288,11 @@ def upload_fasta_to_r2(dataset, directory_path, dotenv, force, release_date):
             file_list.append(fasta_file)
             fasta_path = os.path.join(os.path.dirname(answer_sheet_path), fasta_file)
             file_upload(s3, fasta_path, bucket_name, fasta_file, force)
-    answer_sheet_md5 = md5(answer_sheet_path)[0:20]
-    random_filename = f"{dataset}_answer_sheet_{answer_sheet_md5}.csv"
-    # Read answer sheet and get out list of included species 
-    species_list = list(set(row['SPECIES'] for row in answer_sheet))    
-    # Upload answer_sheet.csv with random filename
-    logging.info("Uploading %s to R2...", random_filename)
-    s3.upload_file(answer_sheet_path, bucket_name, random_filename, ExtraArgs={'ContentDisposition': 'attachment'})
-    file_details['answer_sheet'] = { 'filename': random_filename, 'url': f'{public_url}/{random_filename}', 'species': species_list }
-    file_list.append(random_filename)
+    file_details['answer_sheet'] = private_answer_summary(answer_sheet)
+    logging.info("Keeping %s private; it will not be uploaded to public R2", answer_sheet_path)
     # upload sample_sheet.csv 
-    # md5 the sample sheet
-    samplesheet_name = f"{dataset}_sample_sheet_{answer_sheet_md5[0:10]}.csv"
+    sample_sheet_sha256 = sha256(sample_sheet_path)
+    samplesheet_name = f"{dataset}_sample_sheet_{sample_sheet_sha256[0:10]}.csv"
     logging.info("Uploading %s to R2...", samplesheet_name)
     # print column names in sample_sheet_path file 
     with open(sample_sheet_path, mode="r", encoding="utf-8") as csv_file:
@@ -301,6 +312,7 @@ def upload_fasta_to_r2(dataset, directory_path, dotenv, force, release_date):
 
 
 def upload_hybrid_fastq_to_r2(dataset, directory_path, dotenv, force, release_date):
+    require_upload_dependencies()
     if not load_dotenv(dotenv):
         raise ValueError("Could not load environment variables from .env file.")
 
@@ -358,7 +370,6 @@ def upload_hybrid_fastq_to_r2(dataset, directory_path, dotenv, force, release_da
         logging.info("Uploading hybrid sample %s to R2...", sample["public_name"])
         file_details['samples'].append({
             'public_name': sample['public_name'],
-            'reference_accession': sample.get('reference_accession', ''),
             'R1_URL': sample['R1_URL'],
             'R2_URL': sample['R2_URL'],
             'LONG_READ_URL': sample['LONG_READ_URL']
@@ -367,14 +378,11 @@ def upload_hybrid_fastq_to_r2(dataset, directory_path, dotenv, force, release_da
             key = os.path.basename(fastq)
             file_upload(s3, fastq, bucket_name, key, force)
 
-    answer_sheet_md5 = md5(answer_sheet_path)[0:20]
-    random_filename = f"{dataset}_answer_sheet_{answer_sheet_md5}.csv"
-    species_list = list(set(row['SPECIES'] for row in answer_sheet))
-    s3.upload_file(answer_sheet_path, bucket_name, random_filename, ExtraArgs={'ContentDisposition': 'attachment'})
-    file_details['answer_sheet'] = { 'filename': random_filename, 'url': f'{public_url}/{random_filename}', 'species': species_list }
-    file_list.append(random_filename)
+    file_details['answer_sheet'] = private_answer_summary(answer_sheet)
+    logging.info("Keeping %s private; it will not be uploaded to public R2", answer_sheet_path)
 
-    samplesheet_name = f"{dataset}_sample_sheet_{answer_sheet_md5[0:10]}.csv"
+    sample_sheet_sha256 = sha256(sample_sheet_path)
+    samplesheet_name = f"{dataset}_sample_sheet_{sample_sheet_sha256[0:10]}.csv"
     with open(sample_sheet_path, mode="r", encoding="utf-8") as csv_file:
         csv_reader = csv.DictReader(csv_file)
         sample_sheet = [row for row in csv_reader]
@@ -392,35 +400,18 @@ def upload_hybrid_fastq_to_r2(dataset, directory_path, dotenv, force, release_da
 
 def delete_files_not_in_list(total_uploaded_files):
     """
-    Deletes files in the configured S3 bucket that are not present in a given list of uploaded file keys.
+    Disabled legacy operation.
 
-    Args:
-        total_uploaded_files (list of str): A list of the S3 object keys that must remain in the bucket.
-
-    This function uses Boto3 to list all objects in the specified S3 bucket and removes
-    any object whose key is not in the provided list. If the 'Contents' field is missing,
-    nothing is deleted.
+    The old implementation listed the entire shared bucket and deleted every
+    object not produced by the current run. Dataset cleanup is permitted only
+    in the replacement manifest-driven publisher, where it can be explicitly
+    opted into and restricted to one release prefix.
     """
-    # delete files not in the list
-    s3 = boto3.client(
-        "s3",
-        aws_access_key_id=os.getenv("ACCESS_KEY_ID"),
-        aws_secret_access_key=os.getenv("SECRET_ACCESS_KEY"),
-        endpoint_url=os.getenv("ENDPOINT_URL"),
-        region_name="auto",
-        config=Config(signature_version="s3v4"),
+    del total_uploaded_files
+    raise RuntimeError(
+        "Bucket cleanup is disabled in the legacy publisher. "
+        "Use the namespaced manifest-driven publisher when it is available."
     )
-    bucket_name = os.getenv("BUCKET_NAME")
-    # list all files in the bucket
-    response = s3.list_objects_v2(Bucket=bucket_name)
-    if 'Contents' in response:
-        for obj in response['Contents']:
-            key = obj['Key']
-            if key not in total_uploaded_files:
-                logging.info("Deleting %s from R2...", key)
-                s3.delete_object(Bucket=bucket_name, Key=key)
-            else:
-                logging.info("Keeping %s in R2...", key)
 
 
 def main(args):
@@ -457,8 +448,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--delete",
         action="store_true",
-        help="Delete the files not included in this upload",
-        default=True,
+        help="Deprecated and disabled: the legacy publisher cannot safely delete objects",
+        default=False,
     )
     parser.add_argument(
         "--realtypingpath",

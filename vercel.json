@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "https://ghrupuzzle.nabil-3bd.workers.dev/$1"
+    }
+  ]
+}

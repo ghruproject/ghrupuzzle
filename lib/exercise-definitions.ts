@@ -6,6 +6,7 @@ import type {
 } from './exercises';
 
 export const assemblyPracticeDefinition: ExerciseDefinition<ShortReadSample> = {
+  exercise: 'assembly',
   slug: 'assembly-practice',
   title: 'De novo Assembly Practice',
   subtitle: 'Work through paired-end short-read assemblies and report species calls plus QC outcomes.',
@@ -19,13 +20,13 @@ export const assemblyPracticeDefinition: ExerciseDefinition<ShortReadSample> = {
     'Assemble each paired-end dataset with a de novo assembler of your choice.',
     'Run QC and taxonomic classification on the resulting assemblies.',
     'Mark contaminated datasets explicitly when the evidence supports mixed content.',
-    'Complete the sample sheet and submit the CSV to nabil.alikhan@cgps.group.',
+    'Complete the sample sheet and submit the CSV through this portal.',
   ],
   sampleSheetIntro: 'Fill these columns in the returned assembly sheet.',
   submissionText: 'Use the practice run to settle your pipeline defaults before attempting the timed challenge.',
   answerColumns: [
     { name: 'sample_name', description: 'Public sample identifier used in this exercise.' },
-    { name: 'species', description: 'Expected species label supplied by the organisers.' },
+    { name: 'species', description: 'Organism label included in the supplied sheet; verify your independent taxonomic result.' },
     { name: 'tax_classification', description: 'Your final taxonomic call for the recovered genome.' },
     { name: 'r1', description: 'Forward short-read FASTQ used for the assembly.' },
     { name: 'r2', description: 'Reverse short-read FASTQ used for the assembly.' },
@@ -38,8 +39,8 @@ export const assemblyPracticeDefinition: ExerciseDefinition<ShortReadSample> = {
     { key: 'R1_URL', label: 'R1 FASTQ', isFile: true },
     { key: 'R2_URL', label: 'R2 FASTQ', isFile: true },
   ],
-  emptyStateTitle: 'Practice dataset not uploaded',
-  emptyStateBody: 'Upload the paired-end files and sample sheet with the dataset script to activate this exercise.',
+  emptyStateTitle: 'Practice dataset coming soon',
+  emptyStateBody: 'The instructions are available now. Downloads and submissions will open when the practice dataset is published.',
 };
 
 export const assemblyChallengeDefinition: ExerciseDefinition<ShortReadSample> = {
@@ -55,9 +56,10 @@ export const assemblyChallengeDefinition: ExerciseDefinition<ShortReadSample> = 
 };
 
 export const hybridPracticeDefinition: ExerciseDefinition<HybridAssemblySample> = {
+  exercise: 'hybrid',
   slug: 'hybrid-assembly-practice',
   title: 'Hybrid Assembly Practice',
-  subtitle: 'Combine simulated short and long reads into polished assemblies with explicit QC and reference provenance.',
+  subtitle: 'Combine simulated short and long reads into polished assemblies with explicit QC.',
   summary:
     'This exercise adds a long-read track to the standard assembly workflow so participants can benchmark hybrid assemblers, circularisation heuristics, and polishing behaviour.',
   mode: 'practice',
@@ -68,14 +70,13 @@ export const hybridPracticeDefinition: ExerciseDefinition<HybridAssemblySample> 
     'Assemble each genome using both paired-end short reads and the provided long-read file.',
     'Record which assembler and polishing approach you used for each sample.',
     'Report species calls, QC outcomes, and whether the assembly appears complete or fragmented.',
-    'Return the completed sample sheet to nabil.alikhan@cgps.group.',
+    'Submit the completed sample sheet through this portal.',
   ],
   sampleSheetIntro: 'The hybrid assembly sample sheet is designed to capture both data modalities and assembly provenance.',
-  submissionText: 'Use this practice set to validate that your workflow handles cross-platform evidence cleanly before any challenge release.',
+  submissionText: 'Use this practice set to validate that your workflow handles cross-platform evidence cleanly before a timed challenge.',
   answerColumns: [
     { name: 'sample_name', description: 'Public sample identifier used in this exercise.' },
-    { name: 'reference_accession', description: 'NCBI assembly accession used as the simulation source.' },
-    { name: 'species', description: 'Expected organism label associated with the simulation source.' },
+    { name: 'species', description: 'Organism label included in the supplied sheet; verify your independent taxonomic result.' },
     { name: 'tax_classification', description: 'Your species call from the hybrid assembly result.' },
     { name: 'r1', description: 'Forward Illumina-style FASTQ input.' },
     { name: 'r2', description: 'Reverse Illumina-style FASTQ input.' },
@@ -86,14 +87,13 @@ export const hybridPracticeDefinition: ExerciseDefinition<HybridAssemblySample> 
   ],
   sampleColumns: [
     { key: 'public_name', label: 'Sample' },
-    { key: 'reference_accession', label: 'Reference Accession' },
     { key: 'R1_URL', label: 'R1 FASTQ', isFile: true },
     { key: 'R2_URL', label: 'R2 FASTQ', isFile: true },
     { key: 'LONG_READ_URL', label: 'Long Reads', isFile: true },
   ],
-  emptyStateTitle: 'Hybrid dataset scaffolded',
+  emptyStateTitle: 'Practice dataset coming soon',
   emptyStateBody:
-    'The route is live, but no simulated hybrid reads have been uploaded yet. Populate the dataset directory with R1, R2, LONG_READ files plus answer/sample sheets, then publish with the upload script.',
+    'The instructions are available now. Downloads and submissions will open when the hybrid practice dataset is published.',
 };
 
 export const hybridChallengeDefinition: ExerciseDefinition<HybridAssemblySample> = {
@@ -107,6 +107,7 @@ export const hybridChallengeDefinition: ExerciseDefinition<HybridAssemblySample>
 };
 
 export const typingPracticeDefinition: ExerciseDefinition<TypingSample> = {
+  exercise: 'typing',
   slug: 'typing-practice',
   title: 'Genotyping Practice',
   subtitle: 'Use assembled genomes to recover sequence type, capsule, serotype, and carbapenemase calls.',
@@ -120,7 +121,7 @@ export const typingPracticeDefinition: ExerciseDefinition<TypingSample> = {
     'Genotype each assembly with the appropriate typing workflow.',
     'Extract the required loci, serotype, resistance, and species fields.',
     'Populate the supplied sample sheet without changing the expected column names.',
-    'Submit the final CSV to nabil.alikhan@cgps.group.',
+    'Submit the final CSV through this portal.',
   ],
   sampleSheetIntro: 'These fields capture the core Klebsiella typing outputs expected from each assembly.',
   submissionText: 'Consistency matters here: the goal is not just running the tool, but returning cleanly normalised calls.',
@@ -139,8 +140,8 @@ export const typingPracticeDefinition: ExerciseDefinition<TypingSample> = {
     { key: 'public_name', label: 'Sample' },
     { key: 'FASTA_URL', label: 'Assembly FASTA', isFile: true },
   ],
-  emptyStateTitle: 'Typing dataset not uploaded',
-  emptyStateBody: 'Upload the assembly FASTA files and linked sample sheet to activate this exercise.',
+  emptyStateTitle: 'Practice dataset coming soon',
+  emptyStateBody: 'The instructions are available now. Downloads and submissions will open when the genotyping practice dataset is published.',
 };
 
 export const typingChallengeDefinition: ExerciseDefinition<TypingSample> = {
@@ -154,6 +155,7 @@ export const typingChallengeDefinition: ExerciseDefinition<TypingSample> = {
 };
 
 export const outbreakPracticeDefinition: ExerciseDefinition<ShortReadSample> = {
+  exercise: 'outbreak',
   slug: 'outbreak-practice',
   title: 'Outbreak Practice',
   subtitle: 'Build a mapping-based cluster analysis and deliver tree, metadata, and outbreak calls.',
@@ -187,8 +189,8 @@ export const outbreakPracticeDefinition: ExerciseDefinition<ShortReadSample> = {
     { key: 'R1_URL', label: 'R1 FASTQ', isFile: true },
     { key: 'R2_URL', label: 'R2 FASTQ', isFile: true },
   ],
-  emptyStateTitle: 'Outbreak dataset not uploaded',
-  emptyStateBody: 'Upload the paired-end outbreak inputs and metadata sheet with the dataset script to activate this route.',
+  emptyStateTitle: 'Practice dataset coming soon',
+  emptyStateBody: 'The instructions are available now. Downloads and submissions will open when the outbreak practice dataset is published.',
 };
 
 export const outbreakChallengeDefinition: ExerciseDefinition<ShortReadSample> = {

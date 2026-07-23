@@ -1,37 +1,16 @@
 {
   "samples": [],
   "answer_sheet": {
-    "filename": "",
-    "url": "",
-    "species": [
-      "Klebsiella pneumoniae",
-      "Acinetobacter baumannii"
-    ]
+    "species": []
   },
   "sample_sheet": {
     "filename": "",
     "url": ""
   },
   "release_date": "2026-06-02 09:00:00",
-  "references": [
-    {
-      "accession": "GCF_040931645.1",
-      "organism": "Klebsiella pneumoniae",
-      "assembly_name": "Kp5",
-      "source": "NCBI Assembly / Datasets",
-      "note": "Complete assembly page available via NCBI Datasets."
-    },
-    {
-      "accession": "GCF_009035845.1",
-      "organism": "Acinetobacter baumannii",
-      "assembly_name": "ASM903584v1",
-      "source": "NCBI Assembly / Datasets",
-      "note": "Closed reference suitable for generating hybrid read simulations."
-    }
-  ],
   "notes": [
     "Expected file pattern per sample: <public_name>_R1.fastq.gz, <public_name>_R2.fastq.gz, <public_name>_long.fastq.gz.",
-    "The uploader now accepts reference_accession in the answer sheet and publishes LONG_READ_URL alongside the short-read URLs.",
+    "Source accessions and expected results remain in the private release manifest.",
     "Populate the sample sheet with assembler, QC, and taxonomic interpretation columns before uploading the exercise."
   ]
 }

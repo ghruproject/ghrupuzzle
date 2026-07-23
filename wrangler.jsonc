@@ -1,0 +1,47 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ghrupuzzle",
+  "main": "custom-worker.ts",
+  "compatibility_date": "2026-07-23",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ghrupuzzle",
+      "database_id": "56cc2481-9e10-47b0-96fd-8ca9429f54d5",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "PRACTICE_ASSETS",
+      "bucket_name": "ghrupuzzle-practice"
+    },
+    {
+      "binding": "PRIVATE_ASSETS",
+      "bucket_name": "ghrupuzzle-private"
+    },
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "ghrupuzzle-opennext-cache"
+    }
+  ],
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "ghrupuzzle"
+    }
+  ],
+  "triggers": {
+    "crons": ["0 8 * * *"]
+  },
+  "vars": {
+    "BETTER_AUTH_URL": "https://ghrupuzzle.vercel.app",
+    "POSTMARK_FROM_EMAIL": "GHRU Puzzles <nabil@happykhan.com>"
+  }
+}

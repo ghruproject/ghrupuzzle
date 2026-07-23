@@ -17,6 +17,9 @@ node_modules/
 # next.js
 /.next/
 /out/
+/.open-next/
+/.wrangler/
+/.doc_work/
 
 # production
 /build
@@ -33,6 +36,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+.dev.vars
 
 # vercel
 .vercel

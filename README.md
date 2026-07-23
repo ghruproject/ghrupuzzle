@@ -1,146 +1,72 @@
-# GHRUPuzzles
+# GHRU Puzzles
 
-GHRUPuzzles is a Next.js site for publishing controlled microbial genomics exercises.
+GHRU Puzzles is the delivery and assessment portal for four microbial
+genomics exercises:
 
-The current exercise set includes:
+- Kleborate-based genotyping;
+- short-read de novo assembly;
+- hybrid assembly; and
+- outbreak investigation with phylogeny.
 
-- short-read genome assembly
-- hybrid assembly with simulated short and long reads
-- genotyping
-- outbreak investigation
+The sibling `genomepuzzle` repository generates reproducible public/private
+release packages. This repository publishes those packages, authenticates
+participants, enforces challenge windows, accepts CSV submissions, scores
+results, supports audited review, and issues QR-verifiable certificates.
 
-## Repo Role
+## Architecture
 
-This repository is the website and publishing layer.
+- Next.js on Cloudflare Workers through OpenNext
+- Better Auth with Google, Microsoft Entra, and Postmark magic links
+- Cloudflare D1 for accounts and assessment records
+- public R2 for practice inputs
+- private R2 for challenge inputs, answers, submissions, and PDFs
 
-It is responsible for:
+The old checked-in manifests are retained only as a temporary practice
+fallback. Challenge pages use the authenticated release API; legacy challenge
+manifests and helper scripts no longer expose datasets.
 
-- rendering the exercise pages
-- loading published dataset manifests from `public/*_file_details.json`
-- exposing download links for reads and sample sheets
-- uploading website-ready datasets to R2 with `scripts/update_dataset.py`
+## Local checks
 
-It is not the primary simulation engine.
-
-Dataset generation should stay in a separate local checkout of:
-
-- `https://github.com/happykhan/genomepuzzle`
-
-## Key Paths
-
-- `app/`: Next.js routes
-- `components/`: shared UI and exercise rendering
-- `lib/`: exercise definitions and dataset types
-- `public/`: published dataset manifests and helper download scripts
-- `datasets/`: local seed CSVs for dataset generation workflows
-- `scripts/update_dataset.py`: publish website-ready datasets to R2 and refresh manifest JSON
-- `scripts/generate_hybrid_dataset.py`: run the local `genomepuzzle` engine and convert its output into website-ready hybrid exercise directories
-
-## UI
-
-The site has been refactored onto a local `genomicx/ui`-style shell rather than the original Bulma-only layout.
-
-That refactor includes:
-
-- shared page shell and navigation
-- shared exercise renderer for challenge and practice routes
-- dedicated hybrid assembly pages
-
-## Hybrid Dataset Workflow
-
-Keep the simulator outside this repo. Expected local layout:
-
-```text
-../genomepuzzle
-../genomepuzzle/ghru_output_dataset/hybrid_assembly_work
-../genomepuzzle/ghru_output_dataset/hybrid_assembly_practice
-../genomepuzzle/ghru_output_dataset/hybrid_assembly_real
-```
-
-Clone the generator once:
-
-```bash
-git clone https://github.com/happykhan/genomepuzzle ../genomepuzzle
-```
-
-Generate a website-ready hybrid practice dataset:
-
-```bash
-python3 scripts/generate_hybrid_dataset.py \
-  --samplelist datasets/hybrid_assembly_template.csv \
-  --engine-output-dir ../genomepuzzle/ghru_output_dataset/hybrid_assembly_work \
-  --output-dir ../genomepuzzle/ghru_output_dataset/hybrid_assembly_practice
-```
-
-What that script does:
-
-- runs `genomepuzzle rapid`
-- collects generated `*_R1.fastq.gz`, `*_R2.fastq.gz`, and `*_long.fastq.gz` files
-- renames them to anonymised public sample names
-- creates `answer_sheet.csv`
-- creates `sample_sheet.csv`
-
-The starter file at `datasets/hybrid_assembly_template.csv` is only a minimal seed. Replace it with the actual accession set you want to simulate.
-
-## Publishing Datasets
-
-Once a website-ready dataset directory exists, publish it with:
-
-```bash
-python3 scripts/update_dataset.py \
-  --hybridpath ../genomepuzzle/ghru_output_dataset/hybrid_assembly_practice \
-  --realhybridpath ../genomepuzzle/ghru_output_dataset/hybrid_assembly_real
-```
-
-That script:
-
-- uploads reads and sheets to R2
-- writes `public/*_file_details.json`
-- generates `curl` and `wget` helper download scripts
-
-Hybrid dataset directories are expected to contain:
-
-```text
-Sample_xxxxx_R1.fastq.gz
-Sample_xxxxx_R2.fastq.gz
-Sample_xxxxx_long.fastq.gz
-answer_sheet.csv
-sample_sheet.csv
-```
-
-## Development
-
-Run the site in a Node-enabled shell:
+Use Node.js 22.12 or newer:
 
 ```bash
 npm install
-npm run dev
+npm test
+npm run typecheck
+npm run lint
+npm run build
+npm run cf:build
+python3 -m unittest discover -s tests -v
 ```
 
-This Codex environment did not have `node` or `npm` on `PATH`, so local Next.js build verification was not possible here.
+Copy `.dev.vars.example` to `.dev.vars` for local secrets. The Cloudflare D1
+ID in `wrangler.jsonc` is deliberately a placeholder until the database is
+created.
 
-## GitHub
+## Dataset publication
 
-Current feature branch for this work:
+Validate a generated release without changing R2:
 
-- `codex/genomicx-hybrid-assembly`
+```bash
+python3 scripts/publish_release.py \
+  --release-dir ../genomepuzzle/generated/2026-pilot/typing-practice \
+  --dotenv .practice-r2.env \
+  --private-dotenv .private-r2.env \
+  --public-url https://data.example.org
+```
 
-Pushed changes include:
+Review the plan and add `--apply` only when the public/challenge and private
+bucket credentials have been checked. The publisher has no deletion path.
+The legacy `scripts/update_dataset.py` must not be used for new releases.
 
-- UI refactor
-- hybrid assembly routes
-- hybrid dataset bridge script
-- hybrid manifest scaffolding
+## Documentation
 
-## Deployment
+- [Participant guide editing instructions](content/guides/README.md)
+- [Assessment platform design](docs/assessment-platform-plan.md)
+- [Deployment and operations](docs/deployment-and-operations.md)
+- [GenomePuzzle release contract](docs/genomepuzzle-contract.md)
 
-This repo does not currently define a deployment target in versioned config.
-
-There is no checked-in:
-
-- `vercel.json`
-- `netlify.toml`
-- GitHub Actions deploy workflow
-- other explicit hosting configuration
-
-So deployment is still a separate step from pushing code. If this site is already connected to a hosting provider outside the repo, merge to the tracked production branch and let that provider deploy. Otherwise, add the deployment target explicitly first.
+The production application runs on Cloudflare Workers with D1 for account and
+assessment records, R2 for exercise and submission assets, Better Auth for
+sign-in, and server-generated PDF certificates with public verification
+codes. See the operations guide for deployment and credential rotation.

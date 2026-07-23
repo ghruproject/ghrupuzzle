@@ -1,4 +1,12 @@
 import Image from 'next/image';
+import { publicPageMetadata } from '@/lib/seo';
+
+export const metadata = publicPageMetadata({
+  title: 'About',
+  description:
+    'Learn how GHRUPUZZLES uses complex simulated datasets to test microbial genomics proficiency and validate bioinformatics pipelines.',
+  path: '/about',
+});
 
 export default function AboutPage() {
   return (
@@ -8,33 +16,36 @@ export default function AboutPage() {
           About
         </div>
         <h1 className="text-4xl font-bold leading-tight text-[var(--gx-text)] mt-0 mb-4">
-          Controlled exercises for pathogen genomics training.
+          Simulated datasets for testing microbial genomics workflows.
         </h1>
         <p className="text-lg text-[var(--gx-text-muted)] max-w-3xl">
-          GHRUPuzzles is a skills assessment and training surface for the Global Health Research Unit on Genomic Surveillance of
-          Antimicrobial Resistance. The aim is simple: give participants realistic files, clear deliverables, and enough structure
-          to compare pipelines without making the exercise trivial.
+          GHRUPUZZLES provides complex, simulated microbial genomics datasets for testing
+          analytical proficiency and validating bioinformatics pipelines. Participants can
+          practise with public datasets, submit results for structured assessment and take part in
+          timed challenges.
         </p>
       </section>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <section className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-surface)] p-6">
-          <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-4">What the exercises test</h2>
+          <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-4">What it tests</h2>
           <ul className="pl-5 list-disc space-y-2 text-[var(--gx-text-muted)]">
-            <li>Deploying and running the right bioinformatics tools in a reproducible environment.</li>
-            <li>Interpreting QC, taxonomy, typing, and phylogenetic outputs rather than just generating them.</li>
-            <li>Returning a clean sample sheet or analysis artifact that another team can immediately consume.</li>
+            <li>Running bioinformatics tools in a reproducible environment.</li>
+            <li>Interpreting QC, taxonomy, typing and phylogenetic evidence.</li>
+            <li>Returning consistent result sheets and reusable analysis files.</li>
+            <li>Comparing pipeline behaviour across realistic edge cases.</li>
           </ul>
         </section>
 
         <section className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-surface)] p-6">
-          <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-4">Programme context</h2>
+          <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-4">Who it is for</h2>
           <p className="text-[var(--gx-text-muted)] mb-3">
-            GHRU supports genomic surveillance of antimicrobial resistance across international public health and research settings.
-            These drills are intended for GHRU members first, but anyone working in pathogen genomics can use them as a benchmark.
+            The exercises are intended for bioinformaticians, laboratory teams, trainees and
+            researchers who want to test microbial genomics workflows against shared datasets.
           </p>
           <p className="text-[var(--gx-text-muted)]">
-            Learn more at{' '}
+            The project was developed through the Global Health Research Unit on Genomic
+            Surveillance of Antimicrobial Resistance. Learn more at{' '}
             <a href="https://ghru.pathogensurveillance.net/" target="_blank" rel="noopener noreferrer">
               ghru.pathogensurveillance.net
             </a>
