@@ -11,17 +11,17 @@ export default async function VerifyCertificatePage({
   const { code } = await params;
   if (DEMO_MODE && code === 'demo-preview') {
     return (
-      <div className="gx-page">
-        <section className="card gx-auth-card">
-          <div className="gx-kicker">Credential verification · preview</div>
-          <h1>Valid demonstration certificate</h1>
+      <div className="max-w-5xl mx-auto px-4 py-10">
+        <section className="card max-w-xl mx-auto">
+          <div className="inline-flex mb-3 text-xs font-extrabold tracking-widest uppercase text-[var(--gx-accent)]">Credential verification · preview</div>
+          <h1 className="text-3xl font-bold leading-tight text-[var(--gx-text)] mt-0 mb-4">Valid demonstration certificate</h1>
           <dl>
             <dt>Participant</dt><dd>Demo Participant</dd>
             <dt>Assessment</dt><dd>2026 GHRU Puzzles Preview Round</dd>
             <dt>Issued</dt><dd>23 July 2026</dd>
             <dt>Credential</dt><dd>demo-preview</dd>
           </dl>
-          <p className="gx-muted">Preview only — this is not a real credential.</p>
+          <p className="text-[var(--gx-text-muted)]">Preview only — this is not a real credential.</p>
         </section>
       </div>
     );
@@ -39,17 +39,17 @@ export default async function VerifyCertificatePage({
     .first<Record<string, unknown>>();
   const valid = certificate && !certificate.revoked_at;
   return (
-    <div className="gx-page">
-      <section className="card gx-auth-card">
-        <div className="gx-kicker">Credential verification</div>
+    <div className="max-w-5xl mx-auto px-4 py-10">
+      <section className="card max-w-xl mx-auto">
+        <div className="inline-flex mb-3 text-xs font-extrabold tracking-widest uppercase text-[var(--gx-accent)]">Credential verification</div>
         {!certificate ? (
           <>
-            <h1>Certificate not found</h1>
-            <p className="gx-muted">This credential code is not recognised.</p>
+            <h1 className="text-3xl font-bold leading-tight text-[var(--gx-text)] mt-0 mb-4">Certificate not found</h1>
+            <p className="text-[var(--gx-text-muted)]">This credential code is not recognised.</p>
           </>
         ) : (
           <>
-            <h1>{valid ? 'Valid certificate' : 'Revoked certificate'}</h1>
+            <h1 className="text-3xl font-bold leading-tight text-[var(--gx-text)] mt-0 mb-4">{valid ? 'Valid certificate' : 'Revoked certificate'}</h1>
             <dl>
               <dt>Participant</dt><dd>{String(certificate.name)}</dd>
               <dt>Assessment</dt><dd>{String(certificate.title)}</dd>
@@ -57,7 +57,7 @@ export default async function VerifyCertificatePage({
               <dt>Credential</dt><dd>{String(certificate.public_code)}</dd>
             </dl>
             {!valid ? (
-              <p className="gx-message-error">
+              <p className="rounded-xl border border-red-400/40 bg-[var(--gx-surface)] p-4 text-red-500">
                 Revoked: {String(certificate.revocation_reason ?? 'No reason supplied')}
               </p>
             ) : null}

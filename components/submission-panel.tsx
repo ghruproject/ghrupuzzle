@@ -84,33 +84,33 @@ export function SubmissionPanel({
   }
 
   return (
-    <section className="card gx-panel">
-      <h2>Submit results</h2>
+    <section className="card">
+      <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">Submit results</h2>
       {authRequired ? (
         <p><Link href="/sign-in">Sign in</Link> to submit results and receive feedback.</p>
       ) : release ? (
-        <form className="gx-auth-stack" onSubmit={submit}>
-          <label htmlFor={`${exercise}-${mode}-submission`}>Completed CSV result sheet</label>
+        <form className="flex flex-col gap-4" onSubmit={submit}>
+          <label className="label" htmlFor={`${exercise}-${mode}-submission`}>Completed CSV result sheet</label>
           <input
             id={`${exercise}-${mode}-submission`}
-            className="gx-input"
+            className="gx-input w-full"
             type="file"
             name="file"
             accept=".csv,text/csv"
             required
           />
-          <button className="gx-button" type="submit" disabled={busy}>
+          <button className="gx-btn gx-btn-primary self-start" type="submit" disabled={busy}>
             {busy ? 'Checking submission…' : 'Submit for assessment'}
           </button>
         </form>
       ) : (
-        <p className="gx-muted">
+        <p className="text-[var(--gx-text-muted)]">
           {mode === 'challenge'
             ? 'No challenge release is currently open for your account.'
             : 'No practice release has been published yet.'}
         </p>
       )}
-      {message ? <p role="status" className="gx-muted">{message}</p> : null}
+      {message ? <p role="status" className="text-[var(--gx-text-muted)]">{message}</p> : null}
     </section>
   );
 }

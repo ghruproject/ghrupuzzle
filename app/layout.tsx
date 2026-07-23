@@ -14,8 +14,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <script
           dangerouslySetInnerHTML={{
             __html:

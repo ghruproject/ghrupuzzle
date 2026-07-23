@@ -4,6 +4,17 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { DEMO_MODE } from '@/lib/demo';
 
+const dateTimeFormatter = new Intl.DateTimeFormat('en-GB', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+  timeZone: 'Europe/London',
+});
+
+const dateFormatter = new Intl.DateTimeFormat('en-GB', {
+  dateStyle: 'medium',
+  timeZone: 'Europe/London',
+});
+
 interface Submission {
   id: string;
   original_filename: string;
@@ -86,22 +97,33 @@ export function ParticipantRecord() {
 
   return (
     <>
-      <section className="card gx-panel gx-panel-wide">
-        <h2>Your submissions</h2>
+      <section className="card md:col-span-2">
+        <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">Your submissions</h2>
         {submissions.length ? (
-          <div className="gx-table-wrap">
-            <table className="gx-table">
-              <thead><tr><th>File</th><th>Submitted</th><th>Score</th><th>Status</th><th /></tr></thead>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse min-w-[640px]">
+              <thead>
+                <tr>
+                  {['File', 'Submitted', 'Score', 'Status', ''].map((label) => (
+                    <th
+                      key={label || 'actions'}
+                      className="px-4 py-3 border-b border-[var(--gx-border)] text-left text-xs uppercase tracking-wider text-[var(--gx-text-muted)]"
+                    >
+                      {label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
               <tbody>
                 {submissions.map((submission) => (
                   <tr key={submission.id}>
-                    <td>{submission.original_filename}</td>
-                    <td>{new Date(submission.submitted_at).toLocaleString()}</td>
-                    <td>{submission.earned == null ? '—' : `${submission.earned}/${submission.possible}`}</td>
-                    <td>{submission.provisional ? 'Provisional' : submission.status}</td>
-                    <td>
+                    <td className="px-4 py-3 border-b border-[var(--gx-border)]">{submission.original_filename}</td>
+                    <td className="px-4 py-3 border-b border-[var(--gx-border)]">{dateTimeFormatter.format(new Date(submission.submitted_at))}</td>
+                    <td className="px-4 py-3 border-b border-[var(--gx-border)]">{submission.earned == null ? '—' : `${submission.earned}/${submission.possible}`}</td>
+                    <td className="px-4 py-3 border-b border-[var(--gx-border)]">{submission.provisional ? 'Provisional' : submission.status}</td>
+                    <td className="px-4 py-3 border-b border-[var(--gx-border)]">
                       {!['flagged', 'reviewed'].includes(submission.status) ? (
-                        <button className="gx-button gx-button-secondary" onClick={() => requestReview(submission.id)}>
+                        <button className="gx-btn gx-btn-secondary" onClick={() => requestReview(submission.id)}>
                           Request review
                         </button>
                       ) : submission.status}
@@ -111,24 +133,24 @@ export function ParticipantRecord() {
               </tbody>
             </table>
           </div>
-        ) : <p className="gx-muted">No submissions yet.</p>}
+        ) : <p className="text-[var(--gx-text-muted)]">No submissions yet.</p>}
       </section>
-      <section className="card gx-panel">
-        <h2>Your certificates</h2>
+      <section className="card">
+        <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">Your certificates</h2>
         {certificates.length ? certificates.map((certificate) => (
           <article key={certificate.id}>
-            <h3>{certificate.round_title}</h3>
-            <p className="gx-muted">Issued {new Date(certificate.issued_at).toLocaleDateString()}</p>
-            {certificate.revoked_at ? <span className="gx-tag">Revoked</span> : (
-              <div className="gx-button-row">
+            <h3 className="text-lg font-semibold text-[var(--gx-text)]">{certificate.round_title}</h3>
+            <p className="text-[var(--gx-text-muted)]">Issued {dateFormatter.format(new Date(certificate.issued_at))}</p>
+            {certificate.revoked_at ? <span className="inline-flex items-center px-3 py-1 rounded-full border border-[var(--gx-border)] bg-[var(--gx-accent-dim)] text-[var(--gx-text-bright)] text-xs font-semibold">Revoked</span> : (
+              <div className="flex flex-wrap gap-3 mt-4">
                 {DEMO_MODE ? null : (
-                  <a className="gx-button" href={`/api/certificates/${certificate.id}/download`}>Download PDF</a>
+                  <a className="gx-btn gx-btn-primary" href={`/api/certificates/${certificate.id}/download`}>Download PDF</a>
                 )}
-                <Link className="gx-button gx-button-secondary" href={`/verify/${certificate.public_code}`}>Verify</Link>
+                <Link className="gx-btn gx-btn-secondary" href={`/verify/${certificate.public_code}`}>Verify</Link>
               </div>
             )}
           </article>
-        )) : <p className="gx-muted">No certificates issued yet.</p>}
+        )) : <p className="text-[var(--gx-text-muted)]">No certificates issued yet.</p>}
       </section>
     </>
   );

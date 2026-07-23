@@ -10,11 +10,11 @@ export const dynamic = 'force-dynamic';
 export default async function ReviewPage() {
   if (DEMO_MODE) {
     return (
-      <div className="gx-page">
-        <section className="gx-hero">
-          <div className="gx-kicker">Review workspace · preview</div>
-          <h1>Manual review queue</h1>
-          <p className="gx-hero-copy">Try recording a simulated reviewer decision.</p>
+      <div className="max-w-5xl mx-auto px-4 py-10">
+        <section className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-surface)] p-8 shadow-sm mb-8">
+          <div className="inline-flex mb-3 text-xs font-extrabold tracking-widest uppercase text-[var(--gx-accent)]">Review workspace · preview</div>
+          <h1 className="text-4xl font-bold leading-tight text-[var(--gx-text)] mt-0 mb-4">Manual review queue</h1>
+          <p className="text-lg text-[var(--gx-text-muted)] max-w-3xl mb-5">Try recording a simulated reviewer decision.</p>
         </section>
         <ReviewQueue />
       </div>
@@ -30,11 +30,11 @@ export default async function ReviewPage() {
     .first();
   if (!role) redirect('/dashboard');
   return (
-    <div className="gx-page">
-      <section className="gx-hero">
-        <div className="gx-kicker">Review workspace</div>
-        <h1>Manual review queue</h1>
-        <p className="gx-hero-copy">Confirm or overrule provisional results with an audited reason.</p>
+    <div className="max-w-5xl mx-auto px-4 py-10">
+      <section className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-surface)] p-8 shadow-sm mb-8">
+        <div className="inline-flex mb-3 text-xs font-extrabold tracking-widest uppercase text-[var(--gx-accent)]">Review workspace</div>
+        <h1 className="text-4xl font-bold leading-tight text-[var(--gx-text)] mt-0 mb-4">Manual review queue</h1>
+        <p className="text-lg text-[var(--gx-text-muted)] max-w-3xl mb-5">Confirm or overrule provisional results with an audited reason.</p>
       </section>
       <ReviewQueue />
     </div>

@@ -3,6 +3,12 @@
 import { useEffect, useState } from 'react';
 import { DEMO_MODE } from '@/lib/demo';
 
+const dateTimeFormatter = new Intl.DateTimeFormat('en-GB', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+  timeZone: 'Europe/London',
+});
+
 interface Round {
   id: string;
   title: string;
@@ -59,26 +65,26 @@ export function RoundList() {
   }
 
   return (
-    <section className="card gx-panel">
-      <h2>Challenge rounds</h2>
+    <section className="card">
+      <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">Challenge rounds</h2>
       {rounds.length ? (
-        <div className="gx-stack-sm">
+        <div className="flex flex-col gap-3 mt-3">
           {rounds.map((round) => (
             <article key={round.id}>
-              <h3>{round.title}</h3>
-              <p className="gx-muted">
-                {new Date(round.opens_at).toLocaleString()} – {new Date(round.closes_at).toLocaleString()}
+              <h3 className="text-lg font-semibold text-[var(--gx-text)]">{round.title}</h3>
+              <p className="text-[var(--gx-text-muted)]">
+                {dateTimeFormatter.format(new Date(round.opens_at))} – {dateTimeFormatter.format(new Date(round.closes_at))}
               </p>
               {round.enrolment_status === 'active' ? (
-                <span className="gx-tag">Enrolled</span>
+                <span className="inline-flex items-center px-3 py-1 rounded-full border border-[var(--gx-border)] bg-[var(--gx-accent-dim)] text-[var(--gx-text-bright)] text-xs font-semibold">Enrolled</span>
               ) : (
-                <button className="gx-button" onClick={() => enrol(round.id)}>Enrol</button>
+                <button className="gx-btn gx-btn-primary" onClick={() => enrol(round.id)}>Enrol</button>
               )}
             </article>
           ))}
         </div>
-      ) : <p className="gx-muted">No challenge rounds are currently published.</p>}
-      {message ? <p role="status" className="gx-muted">{message}</p> : null}
+      ) : <p className="text-[var(--gx-text-muted)]">No challenge rounds are currently published.</p>}
+      {message ? <p role="status" className="text-[var(--gx-text-muted)]">{message}</p> : null}
     </section>
   );
 }
