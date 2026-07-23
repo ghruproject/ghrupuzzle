@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { DEMO_MODE } from '@/lib/demo';
 
 const dateTimeFormatter = new Intl.DateTimeFormat('en-GB', {
   dateStyle: 'medium',
@@ -18,21 +17,10 @@ interface Round {
 }
 
 export function RoundList() {
-  const [rounds, setRounds] = useState<Round[]>(
-    DEMO_MODE
-      ? [{
-          id: 'demo-round',
-          title: '2026 GHRU Puzzles Preview Round',
-          opens_at: '2026-07-20T09:00:00Z',
-          closes_at: '2026-08-20T17:00:00Z',
-          enrolment_status: null,
-        }]
-      : [],
-  );
+  const [rounds, setRounds] = useState<Round[]>([]);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    if (DEMO_MODE) return;
     fetch('/api/rounds')
       .then((response) => response.json() as Promise<{ rounds?: Round[] }>)
       .then((result) => setRounds(result.rounds ?? []))
@@ -40,15 +28,6 @@ export function RoundList() {
   }, []);
 
   async function enrol(roundId: string) {
-    if (DEMO_MODE) {
-      setRounds((current) =>
-        current.map((round) =>
-          round.id === roundId ? { ...round, enrolment_status: 'active' } : round,
-        ),
-      );
-      setMessage('Preview enrolment complete.');
-      return;
-    }
     setMessage('');
     const response = await fetch(`/api/rounds/${roundId}/enrol`, { method: 'POST' });
     const result = (await response.json()) as { error?: string };

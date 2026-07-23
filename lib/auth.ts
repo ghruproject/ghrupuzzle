@@ -1,5 +1,5 @@
 import { betterAuth } from 'better-auth';
-import { genericOAuth, magicLink, microsoftEntraId } from 'better-auth/plugins';
+import { magicLink } from 'better-auth/plugins';
 import { nextCookies } from 'better-auth/next-js';
 import { getEnv } from './cloudflare';
 import { sendMagicLinkEmail } from './postmark';
@@ -25,29 +25,12 @@ export async function createAuth() {
       expiresIn: 60 * 60 * 24 * 30,
       updateAge: 60 * 60 * 24,
     },
-    account: {
-      accountLinking: {
-        enabled: true,
-        trustedProviders: ['google', 'microsoft-entra-id'],
-      },
-    },
-    socialProviders: {
-      google: {
-        clientId: env.GOOGLE_CLIENT_ID,
-        clientSecret: env.GOOGLE_CLIENT_SECRET,
-        prompt: 'select_account',
+    advanced: {
+      ipAddress: {
+        ipAddressHeaders: ['cf-connecting-ip'],
       },
     },
     plugins: [
-      genericOAuth({
-        config: [
-          microsoftEntraId({
-            clientId: env.MICROSOFT_CLIENT_ID,
-            clientSecret: env.MICROSOFT_CLIENT_SECRET,
-            tenantId: 'common',
-          }),
-        ],
-      }),
       magicLink({
         expiresIn: 60 * 15,
         storeToken: 'hashed',

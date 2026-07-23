@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { DEMO_MODE } from '@/lib/demo';
 
 const dateTimeFormatter = new Intl.DateTimeFormat('en-GB', {
   dateStyle: 'medium',
@@ -35,34 +34,10 @@ interface Certificate {
 }
 
 export function ParticipantRecord() {
-  const [submissions, setSubmissions] = useState<Submission[]>(
-    DEMO_MODE
-      ? [{
-          id: 'demo-submission',
-          original_filename: 'typing-results.csv',
-          submitted_at: '2026-07-23T10:30:00Z',
-          status: 'scored',
-          earned: 34,
-          possible: 36,
-          passed: 1,
-          provisional: 1,
-        }]
-      : [],
-  );
-  const [certificates, setCertificates] = useState<Certificate[]>(
-    DEMO_MODE
-      ? [{
-          id: 'demo-certificate',
-          public_code: 'demo-preview',
-          issued_at: '2026-07-23T12:00:00Z',
-          revoked_at: null,
-          round_title: '2026 GHRU Puzzles Preview Round',
-        }]
-      : [],
-  );
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
 
   useEffect(() => {
-    if (DEMO_MODE) return;
     Promise.all([
       fetch('/api/submissions').then((response) => response.json() as Promise<{ submissions: Submission[] }>),
       fetch('/api/certificates').then((response) => response.json() as Promise<{ certificates: Certificate[] }>),
@@ -73,14 +48,6 @@ export function ParticipantRecord() {
   }, []);
 
   async function requestReview(submissionId: string) {
-    if (DEMO_MODE) {
-      setSubmissions((current) =>
-        current.map((item) =>
-          item.id === submissionId ? { ...item, status: 'flagged' } : item,
-        ),
-      );
-      return;
-    }
     const reason = window.prompt('Briefly explain what should be reviewed:');
     if (!reason) return;
     const response = await fetch('/api/reviews', {
@@ -143,9 +110,7 @@ export function ParticipantRecord() {
             <p className="text-[var(--gx-text-muted)]">Issued {dateFormatter.format(new Date(certificate.issued_at))}</p>
             {certificate.revoked_at ? <span className="inline-flex items-center px-3 py-1 rounded-full border border-[var(--gx-border)] bg-[var(--gx-accent-dim)] text-[var(--gx-text-bright)] text-xs font-semibold">Revoked</span> : (
               <div className="flex flex-wrap gap-3 mt-4">
-                {DEMO_MODE ? null : (
-                  <a className="gx-btn gx-btn-primary" href={`/api/certificates/${certificate.id}/download`}>Download PDF</a>
-                )}
+                <a className="gx-btn gx-btn-primary" href={`/api/certificates/${certificate.id}/download`}>Download PDF</a>
                 <Link className="gx-btn gx-btn-secondary" href={`/verify/${certificate.public_code}`}>Verify</Link>
               </div>
             )}

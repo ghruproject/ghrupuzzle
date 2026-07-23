@@ -5,7 +5,6 @@ import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { usePathname, useRouter } from 'next/navigation';
 import { NavBar } from '@genomicx/ui';
-import { DEMO_MODE } from '@/lib/demo';
 
 // Bridges react-router-dom navigation (used by @genomicx/ui NavBar) to Next.js router.
 function RouterSyncer() {
@@ -96,14 +95,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
           actions={<ExerciseLinks />}
           mobileActions={<ExerciseLinks mobile />}
         />
-        <main style={{ flex: 1 }}>
-          {DEMO_MODE ? (
-            <div className="border-b border-[var(--gx-border)] bg-[var(--gx-accent-dim)] px-4 py-2 text-center text-xs font-semibold text-[var(--gx-text)]">
-              Vercel UX preview — sample actions are simulated and no assessment records are saved.
-            </div>
-          ) : null}
-          {children}
-        </main>
+        <main style={{ flex: 1 }}>{children}</main>
         <footer className="gx-footer">
           <div className="gx-footer-inner">
             <div className="gx-footer-content">

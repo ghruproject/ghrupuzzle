@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { ExerciseDataset, ExerciseDefinition, ReferenceGenome } from '@/lib/exercises';
 import { SubmissionPanel } from './submission-panel';
-import { DEMO_MODE } from '@/lib/demo';
 
 function isReleased(releaseDate?: string) {
   if (!releaseDate) {
@@ -69,26 +68,6 @@ export function ExercisePage<TSample extends { public_name: string }>({
     let active = true;
 
     async function loadDataset() {
-      if (DEMO_MODE) {
-        const previewPath =
-          definition.mode === 'challenge'
-            ? definition.datasetPath.replace('/real_', '/practice_')
-            : definition.datasetPath;
-        const previewResponse = await fetch(previewPath);
-        if (!previewResponse.ok) {
-          throw new Error(`Failed to fetch ${previewPath}`);
-        }
-        const preview = (await previewResponse.json()) as ExerciseDataset<TSample>;
-        return {
-          ...preview,
-          release_date: '2020-01-01T00:00:00Z',
-          notes: [
-            'Vercel preview: practice files are reused to demonstrate the challenge journey.',
-            ...(preview.notes ?? []),
-          ],
-        };
-      }
-
       const releasesResponse = await fetch(
         `/api/releases?exercise=${definition.exercise}&mode=${definition.mode}`,
       );
@@ -149,10 +128,7 @@ export function ExercisePage<TSample extends { public_name: string }>({
   const hasSamples = (dataset?.samples.length ?? 0) > 0;
   const hasSampleSheet = Boolean(dataset?.sample_sheet?.url);
   const canDownload = hasSamples && hasSampleSheet;
-  const downloadPrefix =
-    DEMO_MODE && definition.mode === 'challenge'
-      ? definition.downloadPrefix.replace(/^real_/, 'practice_')
-      : definition.downloadPrefix;
+  const downloadPrefix = definition.downloadPrefix;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">

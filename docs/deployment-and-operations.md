@@ -4,9 +4,10 @@ The application is configured for Next.js 15.5, Better Auth, OpenNext,
 Cloudflare Workers, D1, two R2 data buckets, and an R2 incremental build cache.
 Use Node.js 22.12 or newer for local and CI builds.
 
-No production resource has been created or mutated by the repository setup.
-The placeholder D1 ID in `wrangler.jsonc` must be replaced with the ID returned
-by Cloudflare.
+Production runs as the `ghrupuzzle` Cloudflare Worker in the
+`nabil@happykhan.com` account. The D1 database and three R2 buckets named below
+are provisioned and bound in `wrangler.jsonc`. Vercel proxies the Worker at the
+canonical public URL, `https://ghrupuzzle.vercel.app`.
 
 ## Provision Cloudflare resources
 
@@ -37,29 +38,14 @@ values through `wrangler secret put`, never in `wrangler.jsonc`:
 
 ```bash
 npx wrangler secret put BETTER_AUTH_SECRET
-npx wrangler secret put BETTER_AUTH_URL
-npx wrangler secret put GOOGLE_CLIENT_ID
-npx wrangler secret put GOOGLE_CLIENT_SECRET
-npx wrangler secret put MICROSOFT_CLIENT_ID
-npx wrangler secret put MICROSOFT_CLIENT_SECRET
 npx wrangler secret put POSTMARK_SERVER_TOKEN
-npx wrangler secret put POSTMARK_FROM_EMAIL
 npx wrangler secret put POSTMARK_WEBHOOK_SECRET
 ```
 
-For local development copy `.dev.vars.example` to `.dev.vars`. This file is
-ignored by Git.
-
-OAuth callbacks are:
-
-```text
-https://YOUR-DOMAIN/api/auth/callback/google
-https://YOUR-DOMAIN/api/auth/oauth2/callback/microsoft-entra-id
-```
-
-Configure the Microsoft app for accounts in any organisational directory and
-personal Microsoft accounts. Configure Postmark’s delivery and bounce
-webhooks to:
+`BETTER_AUTH_URL` and `POSTMARK_FROM_EMAIL` are non-secret production
+variables in `wrangler.jsonc`. For local development copy `.dev.vars.example`
+to `.dev.vars`; this file is ignored by Git. Configure Postmark’s delivery and
+bounce webhooks to:
 
 ```text
 https://YOUR-DOMAIN/api/webhooks/postmark

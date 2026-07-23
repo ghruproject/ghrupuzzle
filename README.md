@@ -64,23 +64,7 @@ The legacy `scripts/update_dataset.py` must not be used for new releases.
 - [Assessment platform design](docs/assessment-platform-plan.md)
 - [Deployment and operations](docs/deployment-and-operations.md)
 
-Production provisioning, OAuth credentials, Postmark webhooks, and the first
-pilot remain external operational steps; no live services are changed by a
-local build.
-
-## Vercel UX preview
-
-`vercel.json` builds an explicitly labelled demonstration version. It
-simulates sign-in, enrolment, submission feedback, review, and certificate
-verification without calling Cloudflare D1/R2 or saving participant data.
-This is for interface testing only; the formal assessment backend remains the
-Cloudflare deployment.
-
-The current test deployment is available at
-[ghrupuzzle.vercel.app](https://ghrupuzzle.vercel.app). To deploy a later
-working tree after linking the Vercel project:
-
-```bash
-vercel link
-vercel deploy
-```
+The production application runs on Cloudflare Workers with D1 for account and
+assessment records, R2 for exercise and submission assets, Better Auth for
+sign-in, and server-generated PDF certificates with public verification
+codes. See the operations guide for deployment and credential rotation.

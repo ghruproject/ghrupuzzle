@@ -1,8 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "nextjs",
-  "buildCommand": "NEXT_PUBLIC_GHRU_DEMO_MODE=true npm run build",
-  "env": {
-    "NEXT_PUBLIC_GHRU_DEMO_MODE": "true"
-  }
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "https://ghrupuzzle.nabil-3bd.workers.dev/$1"
+    }
+  ]
 }

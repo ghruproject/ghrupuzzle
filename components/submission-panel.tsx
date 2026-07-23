@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
 import type { ExerciseMode } from '@/lib/exercises';
-import { DEMO_MODE } from '@/lib/demo';
 
 interface AvailableRelease {
   id: string;
@@ -23,10 +22,6 @@ export function SubmissionPanel({
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (DEMO_MODE) {
-      setRelease({ id: 'demo-release', releaseId: `${exercise}-preview` });
-      return;
-    }
     fetch(`/api/releases?exercise=${exercise}&mode=${mode}`)
       .then(async (response) => {
         if (response.status === 401) {
@@ -48,20 +43,6 @@ export function SubmissionPanel({
     setBusy(true);
     setMessage('');
     const formData = new FormData(event.currentTarget);
-    if (DEMO_MODE) {
-      const upload = formData.get('file');
-      if (!(upload instanceof File)) return;
-      const text = await upload.text();
-      const resultRows = Math.max(0, text.trim().split(/\r?\n/).length - 1);
-      setBusy(false);
-      setMessage(
-        resultRows
-          ? `Preview submission accepted: ${resultRows} result row${resultRows === 1 ? '' : 's'}. A live release would now return its provisional score.`
-          : 'The preview CSV needs a header and at least one result row.',
-      );
-      event.currentTarget.reset();
-      return;
-    }
     formData.set('releaseId', release.id);
     const response = await fetch('/api/submissions', { method: 'POST', body: formData });
     const result = (await response.json()) as {

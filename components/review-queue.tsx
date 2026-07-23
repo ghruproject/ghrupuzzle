@@ -1,7 +1,6 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
-import { DEMO_MODE } from '@/lib/demo';
 
 interface Review {
   id: string;
@@ -17,26 +16,10 @@ interface Review {
 }
 
 export function ReviewQueue() {
-  const [reviews, setReviews] = useState<Review[]>(
-    DEMO_MODE
-      ? [{
-          id: 'demo-review',
-          submission_id: 'demo-submission',
-          reason: 'The participant believes an accepted carbapenemase alias was scored incorrectly.',
-          participant_name: 'Demo Participant',
-          participant_email: 'demo@example.org',
-          exercise: 'typing',
-          release_id: 'typing-preview',
-          earned: 34,
-          possible: 36,
-          passed: 1,
-        }]
-      : [],
-  );
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [message, setMessage] = useState('');
 
   function load() {
-    if (DEMO_MODE) return;
     fetch('/api/reviews')
       .then((response) => response.json() as Promise<{ reviews?: Review[]; error?: string }>)
       .then((result) => {
@@ -52,11 +35,6 @@ export function ReviewQueue() {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const status = String(data.get('status'));
-    if (DEMO_MODE) {
-      setReviews((current) => current.filter((item) => item.id !== review.id));
-      setMessage(`Preview decision recorded: ${status}.`);
-      return;
-    }
     const response = await fetch(`/api/reviews/${review.id}/decision`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

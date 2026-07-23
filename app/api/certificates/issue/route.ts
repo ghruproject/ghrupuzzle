@@ -17,9 +17,9 @@ export async function POST(request: Request): Promise<Response> {
     if (!body.userId || !body.roundId) {
       return Response.json({ error: 'userId and roundId are required' }, { status: 400 });
     }
-    const participant = await env.DB.prepare('SELECT id, name FROM user WHERE id = ?')
+    const participant = await env.DB.prepare('SELECT id, name, email FROM user WHERE id = ?')
       .bind(body.userId)
-      .first<{ id: string; name: string }>();
+      .first<{ id: string; name: string; email: string }>();
     const round = await env.DB.prepare(
       'SELECT id, title, closes_at FROM assessment_round WHERE id = ?',
     )
@@ -71,15 +71,16 @@ export async function POST(request: Request): Promise<Response> {
     const certificateId = crypto.randomUUID();
     const issuedAt = new Date().toISOString();
     const verificationUrl = `${env.BETTER_AUTH_URL.replace(/\/$/, '')}/verify/${publicCode}`;
+    const participantName = participant.name.trim() || participant.email;
     const snapshot = {
-      participantName: participant.name,
+      participantName,
       roundTitle: round.title,
       exercises: [...REQUIRED_EXERCISES],
       results: results.results,
       issuedAt,
     };
     const pdf = await renderCertificate({
-      participantName: participant.name,
+      participantName,
       roundTitle: round.title,
       issuedAt,
       verificationUrl,
