@@ -20,6 +20,7 @@ version, database or reference.
 
 ## Choose an exercise
 
+- [Installing bioinformatics tools](/guides/installing-tools)
 - [Short-read assembly](/guides/short-read-assembly)
 - [Hybrid assembly](/guides/hybrid-assembly)
 - [Genotyping](/guides/genotyping)
@@ -100,6 +101,19 @@ Record:
 - analysis date.
 
 Save the actual command or configuration rather than reconstructing it later.
+Use the [installation guide](/guides/installing-tools) for worked Pixi, Conda,
+Docker, Nextflow and Apptainer examples.
+
+## Verify downloads
+
+Keep the original files unchanged and verify supplied checksums:
+
+```bash
+sha256sum -c checksums.sha256
+gzip -t input/*.fastq.gz
+```
+
+On macOS, `shasum -a 256` can be used when `sha256sum` is unavailable.
 
 ## Common workflow
 

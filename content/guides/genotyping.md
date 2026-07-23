@@ -1,81 +1,100 @@
 ---
 slug: genotyping
 title: Genotyping
-summary: Recover consistent species, sequence-type, surface-locus and resistance-determinant calls.
+summary: Run Kleborate on supplied assemblies and return consistent species, sequence-type, surface-locus and resistance calls.
 exercise: typing
-order: 4
+order: 5
 ---
 
 # Genotyping
 
-## Aim
+## What this exercise tests
 
-Use supplied assemblies to recover consistent organism, sequence-type,
-surface-locus and resistance-determinant calls.
+You are given bacterial genome assemblies. The result sheet asks for consistent
+species, sequence type, capsule and O-antigen calls, plus selected resistance
+determinants.
 
-## Recommended process
+The worked route uses
+[Kleborate](https://github.com/klebgenomics/Kleborate), which is designed for
+the *Klebsiella pneumoniae* species complex.
 
-1. **Check the assemblies.** Confirm that every file is readable and linked to
-   the correct public sample identifier.
-2. **Confirm the organism.** Use a suitable taxonomic method or the species
-   output of a validated genotyping workflow.
-3. **Select the correct scheme.** Typing databases and locus schemes are
-   organism-specific. Do not apply a Klebsiella-specific preset to an unrelated
-   organism.
-4. **Run a suitable workflow.** The targeted Klebsiella exercise requires a
-   workflow that reports MLST, K and O loci, capsule interpretation and acquired
-   resistance determinants.
-5. **Retain confidence information.** Review warnings, missing loci, partial
-   matches and low-confidence calls.
-6. **Normalise the required fields.** Transfer results into the supplied columns
-   without changing their biological meaning.
-7. **Review contradictions.** Unexpected species, multiple alleles or missing
-   loci can indicate contamination, fragmentation or the wrong scheme.
+## Install Kleborate
 
-## Interpreting outputs
+Use a separate Conda environment:
 
-**Sequence type (ST):** Report the called MLST sequence type. If the profile is
-incomplete or novel, use the representation requested by the exercise rather
-than inventing an ST.
+```bash
+conda create -n kleborate -c conda-forge -c bioconda \
+  --strict-channel-priority kleborate
+conda activate kleborate
 
-**K locus and capsule type:** The locus designation and inferred capsule type
-are related but are not interchangeable. Return each in its specified field.
+amrfinder -u
+kleborate --version
+kleborate --list_modules
+```
 
-**wzi allele:** Report the allele call provided by the workflow. Keep missing or
-ambiguous calls explicit.
+See [installing bioinformatics tools](/guides/installing-tools) for general
+environment guidance.
 
-**O locus and O type:** Distinguish the locus designation from its serotype
-interpretation.
+## Check the assemblies
 
-**Carbapenemase genes:** Report detected gene names in the requested format. A
-detected gene is a genomic determinant, not a complete susceptibility
-interpretation.
+Confirm that every file contains sequence and that identifiers are unique:
 
-**Species:** Report the final organism call supported by the analysis. Do not
-copy the expected label when the evidence disagrees.
+```bash
+grep -H -m 1 '^>' input/*.fasta
+ls -lh input/*.fasta
+```
 
-## Normalisation
+Very small, fragmented or contaminated assemblies can produce missing or
+multiple locus calls.
 
-The assessment compares structured fields, so formatting matters. Use
-consistent capitalisation and separators. Do not add explanatory prose to a
-field that expects one controlled value. Put qualifications in a notes field
-when one is provided.
+## Run the KpSC preset
 
-For multiple carbapenemase calls, use the separator shown by the exercise. Do
-not change allele or locus names to a preferred local style.
+```bash
+kleborate \
+  -a input/*.fasta \
+  -o kleborate_results \
+  -p kpsc \
+  --trim_headers
+```
+
+Kleborate accepts `.fasta` and `.fasta.gz` inputs. The KpSC preset reports
+species, MLST, virulence, resistance and K/O locus information. Record the
+Kleborate and database versions.
+
+## Interpret the output
+
+Review warnings and confidence fields before transferring values:
+
+- `st`: MLST sequence type;
+- `k_locus`: K-locus designation;
+- `capsule_type`: capsule interpretation associated with the K locus;
+- `wzi`: reported *wzi* allele;
+- `o_locus`: O-antigen locus;
+- `o_type`: O-antigen serotype interpretation;
+- `bla_carb`: detected carbapenemase genes; and
+- `species`: organism classification supported by the analysis.
+
+The locus designation and inferred serotype are related but are not
+interchangeable. Keep missing, novel and low-confidence calls explicit.
+
+## Normalise the result sheet
+
+Use the exact sample identifier and column names supplied by the exercise.
+Preserve allele and locus nomenclature. When more than one resistance
+determinant is present, use the requested separator and place explanations in a
+notes field rather than inside a controlled-value column.
 
 ## Common problems
 
-**No ST call:** Investigate missing or fragmented housekeeping loci,
-contamination, poor assembly quality or the wrong scheme.
+**No ST call:** Investigate missing or fragmented housekeeping loci, poor
+assembly quality or the wrong scheme.
 
-**Multiple allele calls:** Review mixed-sample evidence and assembly graph or
-coverage information.
+**Multiple alleles:** Review contamination and mixed-sample evidence.
 
-**Unexpected species:** Confirm the input file and rerun an appropriate
-taxonomic method.
+**Unexpected species:** Confirm the input and do not force the KpSC preset onto
+an unrelated organism.
 
-**Database-dependent differences:** Record the database version and do not
-merge calls from incompatible schemes without explanation.
+**Different calls between runs:** Check Kleborate, Kaptive and AMRFinder
+database versions.
 
 Next: [submission and troubleshooting](/guides/submission-and-troubleshooting).

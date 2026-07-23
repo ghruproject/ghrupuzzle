@@ -1,4 +1,4 @@
-import { NEXT_CHALLENGE } from '@/lib/challenge';
+import { challengeDateLabel, type ChallengeRoundRecord } from '@/lib/challenge';
 import { getEnv } from '@/lib/cloudflare';
 import { jsonError } from '@/lib/assessment';
 
@@ -9,10 +9,28 @@ const RATE_LIMIT_MAX = 10;
 export async function POST(request: Request): Promise<Response> {
   try {
     const env = await getEnv();
-    const payload = (await request.json()) as { email?: unknown };
+    const payload = (await request.json()) as { email?: unknown; challengeSlug?: unknown };
     const email = typeof payload.email === 'string' ? payload.email.trim().toLowerCase() : '';
+    const challengeSlug =
+      typeof payload.challengeSlug === 'string' ? payload.challengeSlug.trim() : '';
     if (!email || email.length > 254 || !EMAIL_PATTERN.test(email)) {
       return Response.json({ error: 'Enter a valid email address.' }, { status: 400 });
+    }
+    if (!challengeSlug) {
+      return Response.json({ error: 'Choose an upcoming challenge.' }, { status: 400 });
+    }
+    const challenge = await env.DB.prepare(
+      `SELECT id, slug, title, registration_mode, registration_opens_at,
+              opens_at, closes_at, status
+         FROM assessment_round
+        WHERE slug = ? AND status = 'published'
+          AND closes_at >= ?
+        LIMIT 1`,
+    )
+      .bind(challengeSlug, new Date().toISOString())
+      .first<ChallengeRoundRecord>();
+    if (!challenge) {
+      return Response.json({ error: 'That challenge is no longer available.' }, { status: 404 });
     }
 
     const clientAddress = request.headers.get('cf-connecting-ip') ?? 'unknown';
@@ -45,12 +63,12 @@ export async function POST(request: Request): Promise<Response> {
        ON CONFLICT(challenge_slug, email) DO UPDATE SET
          updated_at = CURRENT_TIMESTAMP`,
     )
-      .bind(crypto.randomUUID(), NEXT_CHALLENGE.slug, email)
+      .bind(crypto.randomUUID(), challenge.slug, email)
       .run();
 
     return Response.json({
       registered: true,
-      message: `You are registered for the ${NEXT_CHALLENGE.dateLabel} opening reminder.`,
+      message: `You are registered for the ${challengeDateLabel(challenge)} opening reminder.`,
     });
   } catch (error) {
     return jsonError(error);

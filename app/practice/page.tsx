@@ -8,11 +8,11 @@ export default function PracticePage() {
           Practice anytime
         </div>
         <h1 className="text-4xl font-bold leading-tight text-[var(--gx-text)] mt-0 mb-4">
-          Preview every exercise and download available practice data without an account.
+          Test a workflow before submitting it for assessment.
         </h1>
         <p className="text-lg text-[var(--gx-text-muted)] max-w-3xl mb-0">
-          Use the instructions, sample sheets, and datasets to test your workflow. Sign in only when
-          you are ready to submit a completed result sheet for assessment and feedback.
+          Preview the task, download the available data and work at your own pace. An account is
+          only required when you submit a completed result sheet for assessment and feedback.
         </p>
       </section>
       <PracticeCards />

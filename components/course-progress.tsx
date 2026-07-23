@@ -38,7 +38,7 @@ export function CourseProgress() {
         return response.json() as Promise<{ submissions: SubmissionResponse[] }>;
       })
       .then((result) => setSubmissions(result.submissions ?? []))
-      .catch(() => setMessage('Your module progress could not be loaded.'))
+      .catch(() => setMessage('Your submission progress could not be loaded.'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -47,17 +47,17 @@ export function CourseProgress() {
   const progress = (submittedCount / modules.length) * 100;
 
   return (
-    <section className="card mb-8" aria-labelledby="course-progress-title">
+    <section className="card mb-8" aria-labelledby="submission-progress-title">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
         <div>
           <div className="inline-flex mb-2 text-xs font-extrabold tracking-widest uppercase text-[var(--gx-accent)]">
-            Your learning pathway
+            Your progress
           </div>
-          <h2 id="course-progress-title" className="text-2xl font-bold text-[var(--gx-text)] mt-0 mb-2">
-            Complete the four genomics modules
+          <h2 id="submission-progress-title" className="text-2xl font-bold text-[var(--gx-text)] mt-0 mb-2">
+            Four microbial genomics exercises
           </h2>
           <p className="text-[var(--gx-text-muted)] m-0">
-            Submit a result sheet for each module to complete your pathway.
+            A green check appears when you have submitted results for an exercise.
           </p>
         </div>
         <span className="inline-flex self-start items-center px-3 py-1 rounded-full border border-[var(--gx-border)] bg-[var(--gx-accent-dim)] text-[var(--gx-text-bright)] text-sm font-semibold">
@@ -67,7 +67,7 @@ export function CourseProgress() {
 
       <ProgressBar
         value={progress}
-        label={loading ? 'Loading your progress…' : `${Math.round(progress)}% of the pathway submitted`}
+        label={loading ? 'Loading your progress…' : `${Math.round(progress)}% of exercises submitted`}
       />
 
       <ol className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 p-0 list-none">
@@ -87,7 +87,7 @@ export function CourseProgress() {
                     ? 'bg-[var(--gx-success)] text-white'
                     : 'bg-[var(--gx-accent-dim)] text-[var(--gx-text-bright)]'
                 }`}
-                aria-label={module.submitted ? 'Submitted' : `Module ${index + 1}`}
+                aria-label={module.submitted ? 'Submitted' : `Exercise ${index + 1}`}
               >
                 {module.submitted ? <CheckIcon /> : index + 1}
               </span>
@@ -111,17 +111,25 @@ export function CourseProgress() {
                   Score {module.latestSubmission.earned}/{module.latestSubmission.possible}
                 </span>
               ) : null}
+              {module.practiceSubmitted ? (
+                <span className="text-xs font-semibold text-[var(--gx-text-muted)]">Practice submitted</span>
+              ) : null}
+              {module.challengeSubmitted ? (
+                <span className="text-xs font-semibold text-[var(--gx-text-muted)]">Challenge submitted</span>
+              ) : null}
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Link className={module.submitted ? 'gx-btn gx-btn-secondary' : 'gx-btn gx-btn-primary'} href={module.href}>
-                {module.submitted ? 'Revisit module' : 'Start module'}
+              <Link
+                className={module.practiceSubmitted ? 'gx-btn gx-btn-secondary' : 'gx-btn gx-btn-primary'}
+                href={module.practiceHref}
+              >
+                {module.practiceSubmitted ? 'Open practice' : 'Start practice'}
               </Link>
-              {module.submitted ? (
-                <a className="gx-btn gx-btn-secondary" href="#submissions">
-                  View submission
-                </a>
-              ) : null}
+              <Link className="gx-btn gx-btn-secondary" href={module.challengeHref}>
+                {module.challengeSubmitted ? 'Open challenge' : 'Start challenge'}
+              </Link>
+              {module.submitted ? <a className="text-sm font-semibold self-center" href="#submissions">View submission</a> : null}
             </div>
           </li>
         ))}

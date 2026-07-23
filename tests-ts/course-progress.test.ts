@@ -6,6 +6,7 @@ test('course progress marks submitted modules and keeps the latest attempt', () 
   const submissions: CourseSubmission[] = [
     {
       exercise: 'assembly',
+      mode: 'practice',
       submitted_at: '2026-07-20T10:00:00Z',
       passed: 0,
       earned: 4,
@@ -13,6 +14,7 @@ test('course progress marks submitted modules and keeps the latest attempt', () 
     },
     {
       exercise: 'assembly',
+      mode: 'challenge',
       submitted_at: '2026-07-21T10:00:00Z',
       passed: 1,
       earned: 9,
@@ -20,6 +22,7 @@ test('course progress marks submitted modules and keeps the latest attempt', () 
     },
     {
       exercise: 'typing',
+      mode: 'practice',
       submitted_at: '2026-07-22T10:00:00Z',
       passed: null,
       earned: null,
@@ -34,6 +37,14 @@ test('course progress marks submitted modules and keeps the latest attempt', () 
   assert.equal(
     modules.find((module) => module.exercise === 'assembly')?.latestSubmission?.earned,
     9,
+  );
+  assert.equal(
+    modules.find((module) => module.exercise === 'assembly')?.practiceSubmitted,
+    true,
+  );
+  assert.equal(
+    modules.find((module) => module.exercise === 'assembly')?.challengeSubmitted,
+    true,
   );
   assert.equal(modules.find((module) => module.exercise === 'hybrid')?.submitted, false);
 });

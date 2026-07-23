@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { ExerciseDataset, ExerciseDefinition, ReferenceGenome } from '@/lib/exercises';
 import { SubmissionPanel } from './submission-panel';
-import { NEXT_CHALLENGE } from '@/lib/challenge';
+import type { PublicChallengeRound, PublicChallengeSchedule } from '@/lib/challenge';
 
 function isReleased(releaseDate?: string) {
   if (!releaseDate) {
@@ -69,6 +69,7 @@ export function ExercisePage<TSample extends { public_name: string }>({
   );
   const [loading, setLoading] = useState(definition.mode === 'practice');
   const [error, setError] = useState<string | null>(null);
+  const [featuredChallenge, setFeaturedChallenge] = useState<PublicChallengeRound | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -130,6 +131,20 @@ export function ExercisePage<TSample extends { public_name: string }>({
     };
   }, [definition.datasetPath, definition.exercise, definition.mode]);
 
+  useEffect(() => {
+    if (definition.mode !== 'challenge') return;
+    let active = true;
+    fetch('/api/challenges')
+      .then((response) => response.json() as Promise<PublicChallengeSchedule>)
+      .then((schedule) => {
+        if (active) setFeaturedChallenge(schedule.featured);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [definition.mode]);
+
   const hasSamples = (dataset?.samples.length ?? 0) > 0;
   const releaseReady = useMemo(
     () => hasSamples && isReleased(dataset?.release_date),
@@ -166,31 +181,27 @@ export function ExercisePage<TSample extends { public_name: string }>({
           </span>
           {definition.mode === 'practice' || hasSamples ? (
             <span className="inline-flex items-center px-3 py-1 rounded-full border border-[var(--gx-border)] bg-[var(--gx-accent-dim)] text-[var(--gx-text-bright)] text-xs font-semibold">
-              Dataset: {loading ? 'loading' : dataset?.samples.length ?? 0} samples
-            </span>
-          ) : null}
-          {dataset?.answer_sheet?.species?.length ? (
-            <span className="inline-flex items-center px-3 py-1 rounded-full border border-[var(--gx-border)] bg-[var(--gx-accent-dim)] text-[var(--gx-text-bright)] text-xs font-semibold">
-              Expected species: {dataset.answer_sheet.species.join(', ')}
+              {loading
+                ? 'Dataset loading'
+                : hasSamples
+                  ? `Dataset: ${dataset?.samples.length ?? 0} samples`
+                  : 'Dataset coming soon'}
             </span>
           ) : null}
         </div>
         {definition.mode === 'challenge' && definition.practiceHref ? (
-          <div className="mt-4 flex flex-wrap gap-3">
+          <div className="mt-4">
             <Link
               href={definition.practiceHref}
               className="inline-flex items-center justify-center px-4 py-2 rounded-xl font-bold border border-[var(--gx-border)] text-[var(--gx-text)] hover:text-[var(--gx-text-bright)] bg-transparent transition-colors text-sm"
             >
               Open practice version →
             </Link>
-            <Link href={GUIDE_PATHS[definition.exercise]} className="gx-btn gx-btn-secondary">
-              Read participant guide
-            </Link>
           </div>
         ) : definition.mode === 'practice' ? (
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <Link href={GUIDE_PATHS[definition.exercise]} className="gx-btn gx-btn-secondary">
-              Read participant guide
+              How to run this exercise
             </Link>
             <span className="text-sm text-[var(--gx-text-muted)]">
               No account is required to view the instructions or download the practice data.
@@ -213,13 +224,15 @@ export function ExercisePage<TSample extends { public_name: string }>({
       {!loading && !error && definition.mode === 'challenge' && !releaseReady ? (
         <div className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-surface)] p-6 mb-6">
           <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">
-            Challenge opens {NEXT_CHALLENGE.dateLabel}
+            {featuredChallenge?.phase === 'upcoming'
+              ? `Challenge opens ${featuredChallenge.dateLabel}`
+              : 'Challenge data are not currently available'}
           </h2>
           <p className="text-[var(--gx-text-muted)]">
-            Challenge data and submissions are available to signed-in, enrolled participants during
-            the challenge window. You can prepare now using the public practice version.
+            Challenge data and submissions are available to signed-in participants who have signed
+            up during the challenge window. You can prepare now using the public practice version.
           </p>
-          <div className="flex flex-wrap gap-3 mt-4">
+          <div className="flex flex-wrap items-center gap-4 mt-4">
             {definition.practiceHref ? (
               <Link
                 href={definition.practiceHref}
@@ -228,11 +241,8 @@ export function ExercisePage<TSample extends { public_name: string }>({
                 Open practice exercise
               </Link>
             ) : null}
-            <Link href="/challenge#reminder" className="gx-btn gx-btn-secondary">
-              Register for opening reminder
-            </Link>
-            <Link href="/sign-in?returnTo=%2Fdashboard" className="gx-btn gx-btn-secondary">
-              Sign in or create an account
+            <Link href="/challenge" className="font-semibold">
+              View challenge signup →
             </Link>
           </div>
         </div>
@@ -241,24 +251,25 @@ export function ExercisePage<TSample extends { public_name: string }>({
       {/* Main content grid */}
       {!loading && !error && (definition.mode !== 'challenge' || releaseReady) ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Task */}
-          <section className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-surface)] p-6">
-            <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">Task</h2>
+          {/* Task and result sheet */}
+          <section className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-surface)] p-6 md:p-8 md:col-span-2">
+            <h2 className="text-2xl font-bold text-[var(--gx-text)] mt-0 mb-3">
+              Task and required results
+            </h2>
             <p className="text-[var(--gx-text-muted)] mb-3">{definition.subtitle}</p>
-            <ul className="pl-5 list-disc space-y-2 text-[var(--gx-text-muted)] mb-3">
+            <ol className="pl-5 list-decimal space-y-2 text-[var(--gx-text-muted)] mb-4">
               {taskInstructions.map((instruction) => (
                 <li key={instruction}>{instruction}</li>
               ))}
-            </ul>
-            <p className="text-[var(--gx-text-muted)]">{definition.submissionText}</p>
-          </section>
+            </ol>
+            <p className="text-[var(--gx-text-muted)] mb-7">{definition.submissionText}</p>
 
-          {/* Sample Sheet Columns */}
-          <section className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-surface)] p-6">
-            <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">Sample Sheet Columns</h2>
+            <h3 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">
+              Result-sheet columns
+            </h3>
             <p className="text-[var(--gx-text-muted)] mb-4">{definition.sampleSheetIntro}</p>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse min-w-[640px]">
+            <div className="hidden md:block">
+              <table className="w-full border-collapse">
                 <thead>
                   <tr>
                     <th className="px-4 py-3 border-b border-[var(--gx-border)] text-left text-xs uppercase tracking-wider text-[var(--gx-text-muted)]">
@@ -283,6 +294,14 @@ export function ExercisePage<TSample extends { public_name: string }>({
                 </tbody>
               </table>
             </div>
+            <dl className="md:hidden divide-y divide-[var(--gx-border)]">
+              {answerColumns.map((column) => (
+                <div key={column.name} className="py-3 first:pt-0 last:pb-0">
+                  <dt className="font-mono font-bold text-sm text-[var(--gx-text)]">{column.name}</dt>
+                  <dd className="text-sm text-[var(--gx-text-muted)] mt-1 ml-0">{column.description}</dd>
+                </div>
+              ))}
+            </dl>
           </section>
 
           {/* Exercise Assets */}

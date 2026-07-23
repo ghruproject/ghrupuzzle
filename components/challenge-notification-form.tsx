@@ -1,8 +1,9 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
+import type { PublicChallengeRound } from '@/lib/challenge';
 
-export function ChallengeNotificationForm() {
+export function ChallengeNotificationForm({ challenge }: { challenge: PublicChallengeRound }) {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -15,7 +16,7 @@ export function ChallengeNotificationForm() {
     const response = await fetch('/api/challenge-notifications', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, challengeSlug: challenge.slug }),
     });
     const result = (await response.json()) as { error?: string; message?: string };
     setBusy(false);
@@ -48,7 +49,7 @@ export function ChallengeNotificationForm() {
         </button>
       </div>
       <p className="text-sm text-[var(--gx-text-muted)] m-0">
-        We will use this address for one opening-day reminder about the August 2026 challenge.
+        We will use this address only for one opening-day reminder for {challenge.title}.
       </p>
       {message ? <p role="status" className="text-sm text-[var(--gx-text-muted)] m-0">{message}</p> : null}
     </form>

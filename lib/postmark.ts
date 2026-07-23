@@ -29,13 +29,14 @@ export async function sendChallengeOpeningEmail(
   config: PostmarkConfig,
   recipient: string,
   challengeUrl: string,
+  challengeTitle: string,
   dateLabel: string,
 ): Promise<string | null> {
   return sendEmail(config, {
     to: recipient,
-    subject: 'The GHRU Challenge is now open',
-    textBody: `The GHRU Challenge is now open and runs ${dateLabel}.\n\nSign in, review the challenge information, and begin when you are ready:\n${challengeUrl}\n\nYou received this one-off reminder because you registered for GHRU Challenge updates.`,
-    htmlBody: `<p>The GHRU Challenge is now open and runs <strong>${escapeHtml(dateLabel)}</strong>.</p><p><a href="${escapeHtml(challengeUrl)}">Open the GHRU Challenge</a></p><p>You received this one-off reminder because you registered for GHRU Challenge updates.</p>`,
+    subject: `${challengeTitle} is now open`,
+    textBody: `${challengeTitle} is now open and runs ${dateLabel}.\n\nSign in and begin when you are ready:\n${challengeUrl}\n\nYou received this one-off reminder because you registered for this challenge.`,
+    htmlBody: `<p><strong>${escapeHtml(challengeTitle)}</strong> is now open and runs ${escapeHtml(dateLabel)}.</p><p><a href="${escapeHtml(challengeUrl)}">Open the challenge</a></p><p>You received this one-off reminder because you registered for this challenge.</p>`,
     tag: 'challenge-opening',
   });
 }

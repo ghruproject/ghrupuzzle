@@ -89,6 +89,30 @@ html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
     background: var(--gx-bg);
   }
 
+  .guide-code {
+    position: relative;
+    margin: 1rem 0;
+  }
+
+  .guide-code pre { margin: 0; padding-top: 2.75rem; }
+
+  .guide-copy {
+    position: absolute;
+    z-index: 1;
+    top: 0.6rem;
+    right: 0.6rem;
+    padding: 0.35rem 0.65rem;
+    border: 1px solid var(--gx-border);
+    border-radius: 0.5rem;
+    background: var(--gx-surface);
+    color: var(--gx-text);
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .guide-copy:hover { color: var(--gx-text-bright); }
+
   .guide-prose pre code {
     padding: 0;
     border: 0;

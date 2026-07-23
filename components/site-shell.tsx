@@ -56,7 +56,7 @@ function ExerciseLinks({ mobile = false }: { mobile?: boolean }) {
         Practice
       </Link>
       <Link href="/challenge" className={className}>
-        2026 Challenge
+        Challenge
       </Link>
       <Link href="/guides" className={className}>
         Guides

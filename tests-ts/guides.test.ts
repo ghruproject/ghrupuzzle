@@ -18,5 +18,7 @@ test('generated guide lookup returns Markdown content', () => {
   const guide = participantGuide('short-read-assembly');
   assert.ok(guide);
   assert.match(guide.markdown, /^# Short-read assembly/m);
-  assert.match(guide.markdown, /## Recommended process/);
+  assert.match(guide.markdown, /## Recommended route/);
+  assert.match(guide.markdown, /GHRU-assembly/);
+  assert.match(guide.markdown, /BactScout/);
 });

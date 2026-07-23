@@ -3,7 +3,7 @@ slug: submission-and-troubleshooting
 title: Submission and troubleshooting
 summary: Record provenance, validate the result sheet and diagnose common workflow failures.
 exercise: all
-order: 6
+order: 7
 ---
 
 # Submission and troubleshooting

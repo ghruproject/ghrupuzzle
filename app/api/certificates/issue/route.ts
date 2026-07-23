@@ -46,7 +46,7 @@ export async function POST(request: Request): Promise<Response> {
     );
     if ([...REQUIRED_EXERCISES].some((exercise) => !passed.has(exercise))) {
       return Response.json(
-        { error: 'All four challenge modules require a final passing score' },
+        { error: 'All four challenge exercises require a final passing score' },
         { status: 409 },
       );
     }

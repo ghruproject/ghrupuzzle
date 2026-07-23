@@ -1,116 +1,127 @@
 ---
 slug: outbreak-analysis
 title: Outbreak analysis
-summary: Call variants, infer a phylogeny and assign analytical clusters using genomic and epidemiological evidence.
+summary: Inspect reads, call variants against one reference, infer a phylogeny and assign analytical clusters.
 exercise: outbreak
-order: 5
+order: 6
 ---
 
 # Outbreak analysis
 
-## Aim
+## What this exercise tests
 
-Use read mapping and high-confidence variants to examine relatedness among
-isolates, infer a phylogeny and assign analytical clusters using both genomic
-and epidemiological evidence.
+You are given paired-end reads and epidemiological metadata. Perform a
+consistent mapping-based analysis, build a tree and use both genomic and
+contextual evidence to assign analytical clusters.
 
-## Recommended process
+The commands below form a worked example. Equivalent validated bacterial
+variant-calling workflows are acceptable unless the exercise specifies one.
 
-1. **Confirm the cohort.** Check read files, sample identifiers and metadata.
-   Exclude or separately analyse clearly different species.
-2. **Choose an appropriate reference.** Use the reference specified by the
-   exercise. If none is specified, choose a high-quality, closely related
-   reference and record its accession and version.
-3. **Prepare the reference deliberately.** Know whether plasmids or other
-   non-chromosomal replicons are included. Record any removal.
-4. **Map reads and call variants.** Use a validated bacterial variant-calling
-   workflow with consistent filters.
-5. **Review per-sample mapping QC.** Check mapped-read proportion, depth,
-   breadth, ambiguous calls and high-confidence variant counts.
-6. **Build the shared alignment.** Confirm that the core or callable alignment
-   contains enough information and has not been collapsed by poor samples.
-7. **Consider masking.** Repetitive, mobile or recombinant regions can distort
-   inference. Mask only with a documented rationale.
-8. **Infer the tree.** Use a suitable nucleotide model and retain
-   branch-support information.
-9. **Integrate metadata.** Match tree tip names to metadata identifiers exactly.
-10. **Assign clusters.** Use genomic, temporal, spatial and epidemiological
-    evidence. Record ambiguity rather than forcing certainty.
-11. **Create the deliverables.** Return the completed CSV, Newick tree and
-    Microreact project file when required.
+## 1. Inspect every read pair
 
-## Reference choice
+Use [BactScout](https://github.com/ghruproject/bactscout) before mapping:
 
-Reference choice affects mapping, the callable genome and the variants
-detected. A distant reference can reduce mapping quality and create biased or
-missing calls. Results generated with different references are not directly
-interchangeable.
+```bash
+pixi run bactscout qc /absolute/path/to/reads \
+  -o /absolute/path/to/bactscout_results \
+  -t 8
+```
 
-Use a reference specified by the exercise for comparability. Otherwise, justify
-your choice and report the exact accession or file checksum.
+Remove or flag a sample only with a recorded reason. Different species or
+strong contamination signals should not silently enter the same phylogeny.
 
-## Quality checks before interpreting a tree
+## 2. Install the worked-example tools
 
-Review:
+```bash
+conda create -n outbreak -c conda-forge -c bioconda \
+  --strict-channel-priority snippy iqtree
+conda activate outbreak
 
-- mapped-read proportion and coverage breadth for every sample;
-- missing or ambiguous positions;
-- the size of the core or callable alignment;
-- the distribution of pairwise differences;
-- unusually long branches;
-- possible mixed or contaminated samples;
-- branch support; and
-- agreement between identifiers in the alignment, tree and metadata.
+snippy --version
+snippy --check
+iqtree2 --version
+```
 
-A phylogenetic tree shows inferred genetic relationships. It does not, by
-itself, prove direct transmission or identify who infected whom.
+## 3. Use one reference for the cohort
 
-## Cluster assignment
+Use the reference specified by the exercise. If none is specified, select a
+high-quality, closely related reference and record its accession and version.
+All samples must use the same reference and filtering rules.
 
-Do not use a universal SNP threshold unless the exercise defines one.
-Appropriate thresholds depend on the organism, time scale, sampling, reference,
-callable genome and pipeline.
+Example for one sample:
 
-Use cluster labels as analytical groupings. Consider:
+```bash
+snippy \
+  --cpus 8 \
+  --outdir work/sample_01 \
+  --ref reference/reference.gbk \
+  --R1 reads/sample_01_R1.fastq.gz \
+  --R2 reads/sample_01_R2.fastq.gz
+```
 
-- genetic proximity;
-- branch support and topology;
-- collection dates and locations;
-- host or source information;
-- phenotype or AMR metadata; and
-- data-quality limitations.
+Repeat consistently for each sample. Review `snps.txt`, `snps.log`, BAM/VCF
+outputs and coverage evidence before building a shared alignment.
 
-Keep cluster names simple and consistent, such as `Cluster 1`, `Cluster 2` and
-`Unclustered`, unless the exercise requests another vocabulary.
+## 4. Build the core SNP alignment
 
-## Microreact preparation
+```bash
+snippy-core \
+  --prefix results/core \
+  work/sample_01 \
+  work/sample_02 \
+  work/sample_03
+```
 
-- Tree tip names must exactly match metadata sample identifiers.
-- Use one header row and one row per sample.
-- Use an unambiguous date format.
-- Keep column names stable.
-- Avoid embedded line breaks in cells.
-- Inspect the final project to confirm that the tree, colours and metadata
-  align.
+Confirm that `core.aln` contains every expected sample and enough callable
+sites. A single poor sample can greatly reduce the shared core.
 
-Export the requested project file after the final inspection. A share link is
-not a substitute when the exercise requires a `.microreact` file.
+## 5. Infer a tree
+
+For a SNP-only alignment, include an ascertainment-bias correction:
+
+```bash
+iqtree2 \
+  -s results/core.aln \
+  -m GTR+ASC \
+  -B 1000 \
+  -T AUTO
+```
+
+Retain the `.treefile`, `.iqtree` report and logs. Review branch support and
+investigate unusually long branches before assigning clusters.
+
+## 6. Combine the tree and metadata
+
+Tree tip names must match metadata identifiers exactly. Before creating a
+Microreact project:
+
+- keep one metadata row per sample;
+- use an unambiguous date format;
+- check that tree and metadata identifiers join;
+- inspect colours, locations and dates; and
+- export the requested `.microreact` file when required.
+
+## Assign clusters
+
+Do not apply a universal SNP threshold unless the exercise defines one.
+Consider genetic distance, topology, branch support, collection date, location,
+host/source information and QC limitations together. A phylogenetic tree does
+not prove direct transmission.
+
+Use stable labels such as `Cluster 1`, `Cluster 2` and `Unclustered`, unless the
+result sheet requests another vocabulary.
 
 ## Common problems
 
-**Low mapping for one sample:** Check species, sample identity, contamination,
-read quality and reference distance.
+**Low mapping:** Check species, contamination, reference distance and read
+quality.
 
-**Very small core alignment:** Identify poor-quality or divergent samples and
+**Very small shared core:** Identify divergent or low-coverage samples and
 review filtering.
 
-**Extremely long branch:** Investigate contamination, mixed reads, reference
-distance and systematic calling errors.
+**Extremely long branch:** Investigate contamination, mixed reads and calling
+errors.
 
-**Tree and metadata do not join:** Normalise sample identifiers; do not edit
-tree labels and metadata independently.
-
-**Unstable cluster assignment:** Report the ambiguity and the evidence that
-changes the interpretation.
+**Tree and metadata fail to join:** Normalise identifiers once and reuse them.
 
 Next: [submission and troubleshooting](/guides/submission-and-troubleshooting).

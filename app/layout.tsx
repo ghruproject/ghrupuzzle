@@ -4,8 +4,8 @@ import { SiteShell } from '@/components/site-shell';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'GHRU puzzles for microbial genomes',
-  description: 'Controlled genomics exercises for assembly, typing, outbreak analysis, and hybrid workflows.',
+  title: 'GHRUPUZZLES | Microbial genomics exercises',
+  description: 'Complex simulated microbial genomics datasets for testing analytical proficiency and bioinformatics pipelines.',
 };
 
 export default function RootLayout({

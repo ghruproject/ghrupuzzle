@@ -16,7 +16,7 @@ export async function POST(
       .bind(id)
       .first<Record<string, unknown>>();
     if (!round || round.status !== 'published') {
-      return Response.json({ error: 'Round is not open for enrolment' }, { status: 404 });
+      return Response.json({ error: 'Challenge signup is not available' }, { status: 404 });
     }
     const now = new Date();
     if (round.registration_opens_at && now < new Date(String(round.registration_opens_at))) {

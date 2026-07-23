@@ -67,7 +67,7 @@ export async function requireReleaseAccess(
   const mode = String(release.mode);
   if (mode === 'challenge') {
     if (release.enrolment_status !== 'active') {
-      throw new Response('Challenge enrolment required', { status: 403 });
+      throw new Response('Challenge signup required', { status: 403 });
     }
     const opensAt = new Date(String(release.opens_at));
     const closesAt = new Date(String(release.closes_at));

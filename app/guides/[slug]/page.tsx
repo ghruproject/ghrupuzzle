@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { PARTICIPANT_GUIDES, participantGuide } from '@/lib/generated-guides';
+import { GuideMarkdown } from '@/components/guide-markdown';
 
 export function generateStaticParams() {
   return PARTICIPANT_GUIDES.map((guide) => ({ slug: guide.slug }));
@@ -68,7 +67,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
 
         <article className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-surface)] p-6 md:p-9 min-w-0">
           <div className="guide-prose">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{guide.markdown}</ReactMarkdown>
+            <GuideMarkdown markdown={guide.markdown} />
           </div>
 
           <nav

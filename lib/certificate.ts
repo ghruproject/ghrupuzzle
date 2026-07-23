@@ -38,7 +38,7 @@ export async function renderCertificate(details: CertificateDetails): Promise<Ui
   drawCentred(page, details.participantName, titleFont, 26, 360);
   drawCentred(
     page,
-    `successfully completed all four challenge modules in ${details.roundTitle}`,
+    `successfully completed all four exercises in ${details.roundTitle}`,
     bodyFont,
     14,
     318,

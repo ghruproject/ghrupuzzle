@@ -1,76 +1,119 @@
 ---
 slug: short-read-assembly
 title: Short-read assembly
-summary: Assemble paired-end reads, assess the recovered genome and make a defensible QC decision.
+summary: Inspect paired-end reads, assemble each bacterial genome and return a defensible species and QC result.
 exercise: assembly
-order: 2
+order: 3
 ---
 
 # Short-read assembly
 
-## Aim
+## What this exercise tests
 
-Produce a draft bacterial genome assembly from paired-end short reads, evaluate
-its quality, identify the organism and return a defensible QC outcome.
+You are given paired-end short reads and a result-sheet template. Assemble each
+genome, inspect read and assembly quality, identify the organism and explain any
+failed or questionable result.
 
-## Recommended process
+## Before starting
 
-1. **Check the read pairs.** Confirm that R1 and R2 contain corresponding reads
-   and map unambiguously to the public sample identifier.
-2. **Assess raw reads.** Review read quality, adapter content, length and
-   taxonomic composition.
-3. **Trim only when justified.** Remove adapters and poor-quality sequence using
-   a documented rule. Excessive trimming can reduce coverage and fragment the
-   assembly.
-4. **Assemble each sample.** Use a bacterial short-read assembler or validated
-   institutional workflow.
-5. **Filter deliberately.** If short contigs are removed, record the minimum
-   retained length and apply the rule consistently.
-6. **Assess the assembly.** Review contiguity, size, GC content, coverage,
-   completeness and contamination.
-7. **Confirm taxonomy.** Base the final call on an appropriate classifier or
-   comparison method, not the expected label alone.
-8. **Assign the QC outcome.** Integrate all evidence and explain failures or
-   caveats in the `error` or `notes` field.
+1. Read [installing bioinformatics tools](/guides/installing-tools).
+2. Download the R1 and R2 files and result sheet.
+3. Confirm that every public sample identifier has one read pair.
+4. Keep the downloaded files unchanged.
 
-## Evidence to review
+```bash
+gzip -t input/*.fastq.gz
+ls -lh input/
+```
+
+## Recommended route
+
+The recommended worked route uses
+[BactScout](https://github.com/ghruproject/bactscout) for read QC and
+[GHRU-assembly](https://github.com/ghruproject/GHRU-assembly) for assembly and
+post-assembly checks. An equivalent documented bacterial assembly workflow is
+also acceptable unless the exercise states otherwise.
+
+### 1. Inspect the reads with BactScout
+
+From a BactScout checkout:
+
+```bash
+pixi run bactscout qc /absolute/path/to/input \
+  -o /absolute/path/to/bactscout_results \
+  -t 8
+```
+
+Review `final_summary.csv` and the per-sample reports. Look for low Q30,
+adapter or ambiguous-base warnings, inadequate coverage, unexpected taxonomy
+and mixed-sample evidence. Record how warnings affected the final QC decision.
+
+### 2. Prepare the GHRU-assembly sample sheet
+
+Create a CSV with absolute input paths. Leave `long_reads` empty for a
+short-read-only sample.
+
+```csv
+sample_id,short_reads1,short_reads2,long_reads,genome_size
+sample_01,/data/sample_01_R1.fastq.gz,/data/sample_01_R2.fastq.gz,,5.5m
+```
+
+Sample identifiers and paths must not contain spaces. FASTQ inputs must end in
+`.fq.gz` or `.fastq.gz`.
+
+### 3. Run the assembly workflow
+
+```bash
+git clone https://github.com/ghruproject/GHRU-assembly.git
+cd GHRU-assembly
+
+nextflow run main.nf \
+  --samplesheet /absolute/path/to/samplesheet.csv \
+  --outdir /absolute/path/to/assembly_results \
+  -resume
+```
+
+The short-read route uses Shovill and includes trimming, assembly assessment,
+taxonomy and contamination-oriented checks. Save the command and execution
+report.
+
+## Evidence to inspect
 
 - total assembly length;
-- number of contigs;
-- N50 or another contiguity summary;
-- read coverage or mapped-read proportion;
+- number of contigs and N50;
 - GC content;
-- estimated completeness and contamination;
-- taxonomic classification; and
+- read depth or mapped-read proportion;
+- taxonomic classification;
+- completeness and contamination evidence;
+- extremely short or duplicated contigs; and
 - agreement between read-level and assembly-level findings.
 
-N50 is not a measure of correctness. A highly contiguous assembly can still
-contain contamination, misassemblies or the wrong organism. A fragmented
-assembly may remain usable for some typing tasks. Judge fitness for the
-exercise rather than optimising one number.
+N50 is not a correctness score. A contiguous assembly can contain the wrong
+organism, contamination or a misassembly.
+
+## Fill the result sheet
+
+- `sample_name`: preserve the supplied public identifier.
+- `tax_classification`: record the organism supported by your analysis.
+- `r1` and `r2`: retain the correct paired filenames.
+- `qc`: use the exact vocabulary requested by the template.
+- `error`: give the main reason for a failed result.
+- `notes`: record warnings, important parameters and interpretation.
+
+Do not copy an expected species label into `tax_classification` without
+checking the evidence.
 
 ## Common problems
 
-**Very small assembly:** Check read pairing, input paths, trimming severity and
-coverage.
+**Very small assembly:** Check read pairing, coverage, trimming and file paths.
 
-**Very large assembly:** Investigate contamination, duplicated sequence, mixed
-samples or unfiltered short contigs.
-
-**Unexpected GC content or taxonomy:** Check sample identity and contamination
-before rerunning with different parameters.
+**Very large assembly:** Investigate contamination, duplicated sequence or
+unfiltered short contigs.
 
 **Many short contigs:** Review coverage, read quality, mixed content and repeat
 structure.
 
-**Conflicting QC tools:** Inspect the underlying reports and document which
-evidence determined the final outcome.
-
-## Result sheet
-
-The practice sheet includes the public sample name, expected species label,
-your taxonomic classification, R1 and R2 filenames, the overall QC outcome, an
-error reason and notes. Complete the supplied template rather than creating a
-replacement.
+**QC tools disagree:** Recheck the underlying reports before choosing a final
+call.
 
 Next: [submission and troubleshooting](/guides/submission-and-troubleshooting).

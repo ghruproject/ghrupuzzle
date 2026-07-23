@@ -64,7 +64,7 @@ export function ParticipantRecord() {
 
   return (
     <>
-      <section id="submissions" className="card md:col-span-2 scroll-mt-24">
+      <section id="submissions" className="card mb-8 scroll-mt-24">
         <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">Your submissions</h2>
         {submissions.length ? (
           <div className="overflow-x-auto">
@@ -87,7 +87,11 @@ export function ParticipantRecord() {
                     <td className="px-4 py-3 border-b border-[var(--gx-border)]">{submission.original_filename}</td>
                     <td className="px-4 py-3 border-b border-[var(--gx-border)]">{dateTimeFormatter.format(new Date(submission.submitted_at))}</td>
                     <td className="px-4 py-3 border-b border-[var(--gx-border)]">{submission.earned == null ? '—' : `${submission.earned}/${submission.possible}`}</td>
-                    <td className="px-4 py-3 border-b border-[var(--gx-border)]">{submission.provisional ? 'Provisional' : submission.status}</td>
+                    <td className="px-4 py-3 border-b border-[var(--gx-border)]">
+                      <span className="inline-flex items-center gap-1 font-semibold text-[var(--gx-success)]">
+                        ✓ {submission.provisional ? 'Submitted — provisional' : submission.status}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 border-b border-[var(--gx-border)]">
                       {!['flagged', 'reviewed'].includes(submission.status) ? (
                         <button className="gx-btn gx-btn-secondary" onClick={() => requestReview(submission.id)}>

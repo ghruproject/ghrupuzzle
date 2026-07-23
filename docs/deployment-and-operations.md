@@ -41,6 +41,10 @@ values through `wrangler secret put`, never in `wrangler.jsonc`:
 npx wrangler secret put BETTER_AUTH_SECRET
 npx wrangler secret put POSTMARK_SERVER_TOKEN
 npx wrangler secret put POSTMARK_WEBHOOK_SECRET
+npx wrangler secret put GOOGLE_CLIENT_ID
+npx wrangler secret put GOOGLE_CLIENT_SECRET
+npx wrangler secret put MICROSOFT_CLIENT_ID
+npx wrangler secret put MICROSOFT_CLIENT_SECRET
 ```
 
 `BETTER_AUTH_URL` and `POSTMARK_FROM_EMAIL` are non-secret production
@@ -55,6 +59,21 @@ Authorization: Bearer POSTMARK_WEBHOOK_SECRET
 
 Postmark link and open tracking are disabled for sign-in messages.
 
+### Google and Microsoft sign-in
+
+Social sign-in buttons appear only when the corresponding client ID and secret
+are configured. Register these exact redirect URLs with the providers:
+
+```text
+https://ghrupuzzle.vercel.app/api/auth/callback/google
+https://ghrupuzzle.vercel.app/api/auth/callback/microsoft
+```
+
+For Microsoft Entra ID, set `MICROSOFT_TENANT_ID` as a non-secret Worker
+variable when sign-in should be restricted to one tenant. If it is omitted,
+the application uses `common`, allowing personal Microsoft accounts and
+accounts from any Entra tenant supported by the app registration.
+
 ## Challenge opening reminders
 
 The public challenge page stores explicit one-off reminder registrations in
@@ -63,9 +82,10 @@ open, the scheduled handler sends Postmark reminders to registrations that do
 not yet have a recorded delivery attempt and records the returned Postmark
 message ID. Outside the challenge window it exits without sending.
 
-The challenge window is defined once in `lib/challenge.ts`. Update that record
-and use a new slug for each future challenge so previous banner dismissals and
-registrations do not carry forward.
+Published rounds are loaded from D1. Create a new round with a unique slug for
+each future challenge so previous banner dismissals and registrations do not
+carry forward. The current open round is featured automatically; otherwise the
+next upcoming round is shown.
 
 ## Bootstrap the first administrator
 
@@ -125,7 +145,7 @@ release bundle; do not reproduce them in deployment configuration.
 6. Work the `/review` queue and record a reason for every override.
 7. After closing, call `POST /api/rounds/{id}/finalize`. Scores with open
    reviews remain provisional.
-8. Issue certificates only when all four modules have final passing scores.
+8. Issue certificates only when all four exercises have final passing scores.
 
 Practice releases are available to every authenticated account and return
 detailed comparison feedback. Challenge responses return totals only; private

@@ -1,7 +1,9 @@
 export type CourseExercise = 'assembly' | 'hybrid' | 'typing' | 'outbreak';
+export type SubmissionMode = 'practice' | 'challenge';
 
 export interface CourseSubmission {
   exercise: CourseExercise;
+  mode: SubmissionMode;
   submitted_at: string;
   passed: number | null;
   earned: number | null;
@@ -12,53 +14,67 @@ export interface CourseModule {
   exercise: CourseExercise;
   title: string;
   description: string;
-  href: string;
+  practiceHref: string;
+  challengeHref: string;
   submitted: boolean;
   passed: boolean;
   latestSubmission: CourseSubmission | null;
+  practiceSubmitted: boolean;
+  challengeSubmitted: boolean;
 }
 
-const MODULES: Array<Omit<CourseModule, 'submitted' | 'passed' | 'latestSubmission'>> = [
+const MODULES: Array<
+  Omit<
+    CourseModule,
+    'submitted' | 'passed' | 'latestSubmission' | 'practiceSubmitted' | 'challengeSubmitted'
+  >
+> = [
   {
     exercise: 'assembly',
     title: 'Short-read assembly',
-    description: 'Assembly, contamination detection, and structured QC reporting.',
-    href: '/assembly/practice',
+    description: 'Assembly, contamination detection and structured QC reporting.',
+    practiceHref: '/assembly/practice',
+    challengeHref: '/assembly',
   },
   {
     exercise: 'hybrid',
     title: 'Hybrid assembly',
-    description: 'Hybrid assembly, polishing, circularisation, and completeness.',
-    href: '/hybrid-assembly/practice',
+    description: 'Hybrid assembly, polishing, circularisation and completeness.',
+    practiceHref: '/hybrid-assembly/practice',
+    challengeHref: '/hybrid-assembly',
   },
   {
     exercise: 'typing',
     title: 'Genotyping',
-    description: 'Sequence type, locus, serotype, species, and resistance calls.',
-    href: '/typing/practice',
+    description: 'Sequence type, locus, serotype, species and resistance calls.',
+    practiceHref: '/typing/practice',
+    challengeHref: '/typing',
   },
   {
     exercise: 'outbreak',
     title: 'Outbreak analysis',
-    description: 'Mapping, variants, phylogeny, and outbreak cluster interpretation.',
-    href: '/outbreak/practice',
+    description: 'Mapping, variants, phylogeny and outbreak cluster interpretation.',
+    practiceHref: '/outbreak/practice',
+    challengeHref: '/outbreak',
   },
 ];
 
 export function buildCourseModules(submissions: CourseSubmission[]): CourseModule[] {
   return MODULES.map((module) => {
-    const latestSubmission =
-      submissions
-        .filter((submission) => submission.exercise === module.exercise)
-        .sort(
-          (left, right) =>
-            new Date(right.submitted_at).getTime() - new Date(left.submitted_at).getTime(),
-        )[0] ?? null;
+    const exerciseSubmissions = submissions
+      .filter((submission) => submission.exercise === module.exercise)
+      .sort(
+        (left, right) =>
+          new Date(right.submitted_at).getTime() - new Date(left.submitted_at).getTime(),
+      );
+    const latestSubmission = exerciseSubmissions[0] ?? null;
     return {
       ...module,
       submitted: latestSubmission !== null,
-      passed: latestSubmission?.passed === 1,
+      passed: exerciseSubmissions.some((submission) => submission.passed === 1),
       latestSubmission,
+      practiceSubmitted: exerciseSubmissions.some((submission) => submission.mode === 'practice'),
+      challengeSubmitted: exerciseSubmissions.some((submission) => submission.mode === 'challenge'),
     };
   });
 }
