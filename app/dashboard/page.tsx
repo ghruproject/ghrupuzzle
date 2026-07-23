@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { createAuth } from '@/lib/auth';
 import { RoundList } from '@/components/round-list';
 import { ParticipantRecord } from '@/components/participant-record';
+import { CourseProgress } from '@/components/course-progress';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,6 +30,7 @@ export default async function DashboardPage() {
           <Link href="/challenge" className="gx-btn gx-btn-secondary">View 2026 Challenge</Link>
         </div>
       </section>
+      <CourseProgress />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <RoundList />
         <ParticipantRecord />

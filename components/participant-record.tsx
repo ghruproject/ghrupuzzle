@@ -64,7 +64,7 @@ export function ParticipantRecord() {
 
   return (
     <>
-      <section className="card md:col-span-2">
+      <section id="submissions" className="card md:col-span-2 scroll-mt-24">
         <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">Your submissions</h2>
         {submissions.length ? (
           <div className="overflow-x-auto">

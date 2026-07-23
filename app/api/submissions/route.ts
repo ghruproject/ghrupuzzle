@@ -130,8 +130,10 @@ export async function GET(request: Request): Promise<Response> {
     const user = await requireUser(request);
     const rows = await env.DB.prepare(
       `SELECT s.id, s.release_id, s.attempt_number, s.original_filename, s.submitted_at,
-              s.status, sc.earned, sc.possible, sc.passed, sc.provisional
+              s.status, sc.earned, sc.possible, sc.passed, sc.provisional,
+              d.exercise, d.mode
          FROM submission s
+         JOIN dataset_release d ON d.id = s.release_id
          LEFT JOIN score sc ON sc.submission_id = s.id
         WHERE s.user_id = ?
         ORDER BY s.submitted_at DESC`,
