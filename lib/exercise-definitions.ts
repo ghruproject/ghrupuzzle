@@ -6,6 +6,7 @@ import type {
 } from './exercises';
 
 export const assemblyPracticeDefinition: ExerciseDefinition<ShortReadSample> = {
+  exercise: 'assembly',
   slug: 'assembly-practice',
   title: 'De novo Assembly Practice',
   subtitle: 'Work through paired-end short-read assemblies and report species calls plus QC outcomes.',
@@ -55,6 +56,7 @@ export const assemblyChallengeDefinition: ExerciseDefinition<ShortReadSample> = 
 };
 
 export const hybridPracticeDefinition: ExerciseDefinition<HybridAssemblySample> = {
+  exercise: 'hybrid',
   slug: 'hybrid-assembly-practice',
   title: 'Hybrid Assembly Practice',
   subtitle: 'Combine simulated short and long reads into polished assemblies with explicit QC and reference provenance.',
@@ -107,6 +109,7 @@ export const hybridChallengeDefinition: ExerciseDefinition<HybridAssemblySample>
 };
 
 export const typingPracticeDefinition: ExerciseDefinition<TypingSample> = {
+  exercise: 'typing',
   slug: 'typing-practice',
   title: 'Genotyping Practice',
   subtitle: 'Use assembled genomes to recover sequence type, capsule, serotype, and carbapenemase calls.',
@@ -154,6 +157,7 @@ export const typingChallengeDefinition: ExerciseDefinition<TypingSample> = {
 };
 
 export const outbreakPracticeDefinition: ExerciseDefinition<ShortReadSample> = {
+  exercise: 'outbreak',
   slug: 'outbreak-practice',
   title: 'Outbreak Practice',
   subtitle: 'Build a mapping-based cluster analysis and deliver tree, metadata, and outbreak calls.',

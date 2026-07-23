@@ -50,6 +50,7 @@ export interface InstructionColumn {
 }
 
 export interface ExerciseDefinition<TSample> {
+  exercise: 'typing' | 'assembly' | 'hybrid' | 'outbreak';
   slug: string;
   title: string;
   subtitle: string;

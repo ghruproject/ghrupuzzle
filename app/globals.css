@@ -260,6 +260,63 @@ code {
   padding: 2.25rem 0 4rem;
 }
 
+.gx-auth-card {
+  width: min(100%, 34rem);
+  margin: 2rem auto;
+  padding: 2rem;
+}
+
+.gx-auth-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.gx-auth-button {
+  width: 100%;
+  justify-content: center;
+}
+
+.gx-auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: var(--gx-text-muted);
+}
+
+.gx-auth-divider::before,
+.gx-auth-divider::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: var(--gx-border);
+}
+
+.gx-input {
+  width: 100%;
+  border: 1px solid var(--gx-border);
+  border-radius: 0.55rem;
+  background: var(--gx-surface);
+  color: var(--gx-text);
+  padding: 0.75rem 0.85rem;
+  font: inherit;
+}
+
+.gx-input:focus {
+  outline: 2px solid var(--gx-accent);
+  outline-offset: 2px;
+}
+
+.gx-demo-banner {
+  margin-top: 1rem;
+  border: 1px solid var(--gx-accent);
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--gx-accent) 12%, transparent);
+  color: var(--gx-text-bright);
+  padding: 0.75rem 1rem;
+  text-align: center;
+  font-weight: 700;
+}
+
 .gx-hero {
   position: relative;
   overflow: hidden;

@@ -87,8 +87,6 @@
         }
     ],
     "answer_sheet": {
-        "filename": "practice_outbreak_answer_sheet_eabeb18e767d7b93de4e.csv",
-        "url": "https://pub-e661bf7ded744bd79c156d3a4f4323ef.r2.dev/practice_outbreak_answer_sheet_eabeb18e767d7b93de4e.csv",
         "species": [
             "Klebsiella pneumoniae"
         ]

@@ -1,0 +1,9 @@
+BETTER_AUTH_SECRET=generate-at-least-32-random-characters
+BETTER_AUTH_URL=http://localhost:3000
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+MICROSOFT_CLIENT_ID=
+MICROSOFT_CLIENT_SECRET=
+POSTMARK_SERVER_TOKEN=POSTMARK_API_TEST
+POSTMARK_FROM_EMAIL=GHRU Puzzles <verified-sender@example.org>
+POSTMARK_WEBHOOK_SECRET=generate-a-separate-random-webhook-secret

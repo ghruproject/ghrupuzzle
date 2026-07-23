@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { ExerciseDataset, ExerciseDefinition, ReferenceGenome } from '@/lib/exercises';
+import { SubmissionPanel } from './submission-panel';
+import { DEMO_MODE } from '@/lib/demo';
 
 function isReleased(releaseDate?: string) {
   if (!releaseDate) {
@@ -48,7 +50,7 @@ function ReferenceList({ references }: { references: ReferenceGenome[] }) {
   );
 }
 
-export function ExercisePage<TSample extends { public_name: string } & Record<string, string>>({
+export function ExercisePage<TSample extends { public_name: string }>({
   definition,
 }: {
   definition: ExerciseDefinition<TSample>;
@@ -60,14 +62,58 @@ export function ExercisePage<TSample extends { public_name: string } & Record<st
   useEffect(() => {
     let active = true;
 
-    fetch(definition.datasetPath)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`Failed to fetch ${definition.datasetPath}`);
+    async function loadDataset() {
+      if (DEMO_MODE) {
+        const previewPath =
+          definition.mode === 'challenge'
+            ? definition.datasetPath.replace('/real_', '/practice_')
+            : definition.datasetPath;
+        const previewResponse = await fetch(previewPath);
+        if (!previewResponse.ok) {
+          throw new Error(`Failed to fetch ${previewPath}`);
         }
+        const preview = (await previewResponse.json()) as ExerciseDataset<TSample>;
+        return {
+          ...preview,
+          release_date: '2020-01-01T00:00:00Z',
+          notes: [
+            'Vercel preview: practice files are reused to demonstrate the challenge journey.',
+            ...(preview.notes ?? []),
+          ],
+        };
+      }
+      const releasesResponse = await fetch(
+        `/api/releases?exercise=${definition.exercise}&mode=${definition.mode}`,
+      );
+      if (releasesResponse.ok) {
+        const releaseResult = (await releasesResponse.json()) as {
+          releases: Array<{ id: string }>;
+        };
+        if (releaseResult.releases.length) {
+          const datasetResponse = await fetch(
+            `/api/releases/${encodeURIComponent(releaseResult.releases[0].id)}`,
+          );
+          if (!datasetResponse.ok) {
+            throw new Error('The published release could not be loaded.');
+          }
+          return datasetResponse.json() as Promise<ExerciseDataset<TSample>>;
+        }
+      }
+      if (definition.mode === 'challenge') {
+        return {
+          samples: [],
+          answer_sheet: { species: [] },
+          sample_sheet: { url: '' },
+        } as ExerciseDataset<TSample>;
+      }
+      const legacyResponse = await fetch(definition.datasetPath);
+      if (!legacyResponse.ok) {
+        throw new Error(`Failed to fetch ${definition.datasetPath}`);
+      }
+      return legacyResponse.json() as Promise<ExerciseDataset<TSample>>;
+    }
 
-        return response.json();
-      })
+    loadDataset()
       .then((payload) => {
         if (!active) {
           return;
@@ -88,12 +134,16 @@ export function ExercisePage<TSample extends { public_name: string } & Record<st
     return () => {
       active = false;
     };
-  }, [definition.datasetPath]);
+  }, [definition.datasetPath, definition.exercise, definition.mode]);
 
   const releaseReady = useMemo(() => isReleased(dataset?.release_date), [dataset?.release_date]);
   const hasSamples = (dataset?.samples.length ?? 0) > 0;
   const hasSampleSheet = Boolean(dataset?.sample_sheet?.url);
   const canDownload = hasSamples && hasSampleSheet;
+  const downloadPrefix =
+    DEMO_MODE && definition.mode === 'challenge'
+      ? definition.downloadPrefix.replace(/^real_/, 'practice_')
+      : definition.downloadPrefix;
 
   return (
     <div className="gx-page">
@@ -175,7 +225,7 @@ export function ExercisePage<TSample extends { public_name: string } & Record<st
                     Download sample sheet
                   </a>
                   <a
-                    href={`/${definition.downloadPrefix}-curl-download_samples.txt`}
+                    href={`/${downloadPrefix}-curl-download_samples.txt`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="gx-button gx-button-secondary"
@@ -183,7 +233,7 @@ export function ExercisePage<TSample extends { public_name: string } & Record<st
                     curl helper
                   </a>
                   <a
-                    href={`/${definition.downloadPrefix}-wget-download_samples.txt`}
+                    href={`/${downloadPrefix}-wget-download_samples.txt`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="gx-button gx-button-secondary"
@@ -221,6 +271,8 @@ export function ExercisePage<TSample extends { public_name: string } & Record<st
               </div>
             ) : null}
           </section>
+
+          <SubmissionPanel exercise={definition.exercise} mode={definition.mode} />
 
           <section className="card gx-panel gx-panel-wide">
             <div className="gx-panel-heading">

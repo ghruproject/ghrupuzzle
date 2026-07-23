@@ -39,8 +39,8 @@ export default function Home() {
           about outputs, and return a clean deliverable under realistic constraints.
         </p>
         <div className="gx-button-row">
-          <Link href="/assembly" className="gx-button">
-            Start with assembly
+          <Link href="/sign-in" className="gx-button">
+            Sign in to participate
           </Link>
           <Link href="/hybrid-assembly/practice" className="gx-button gx-button-secondary">
             Open hybrid practice
