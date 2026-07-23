@@ -414,6 +414,7 @@ def publish_plan(
 
 
 def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     parser = argparse.ArgumentParser(
         description=(
             "Validate a GenomePuzzle public package and optionally publish it "

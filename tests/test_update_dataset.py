@@ -1,14 +1,17 @@
 import unittest
 import hashlib
 import json
+import logging
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from scripts.publish_release import (
     bundle_sha256,
     build_private_upload_plan,
     build_upload_plan,
     load_and_validate_release,
+    main as publish_main,
 )
 from scripts.update_dataset import (
     delete_files_not_in_list,
@@ -51,6 +54,19 @@ class LegacyPublisherSafetyTests(unittest.TestCase):
 
 
 class ManifestPublisherTests(unittest.TestCase):
+    def test_cli_enables_visible_info_logging(self):
+        with patch("scripts.publish_release.logging.basicConfig") as configure:
+            with patch(
+                "scripts.publish_release.argparse.ArgumentParser.parse_args",
+                side_effect=SystemExit,
+            ):
+                with self.assertRaises(SystemExit):
+                    publish_main()
+
+        configure.assert_called_once_with(
+            level=logging.INFO, format="%(levelname)s %(message)s"
+        )
+
     def make_release(self, root):
         release = Path(root)
         files = release / "public" / "files"
