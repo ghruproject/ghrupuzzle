@@ -19,6 +19,7 @@ node_modules/
 /out/
 /.open-next/
 /.wrangler/
+/.doc_work/
 
 # production
 /build

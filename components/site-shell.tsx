@@ -58,6 +58,9 @@ function ExerciseLinks({ mobile = false }: { mobile?: boolean }) {
       <Link href="/challenge" className={className}>
         2026 Challenge
       </Link>
+      <Link href="/guides" className={className}>
+        Guides
+      </Link>
       {!isPending && session ? (
         <>
           <Link href="/dashboard" className={className}>

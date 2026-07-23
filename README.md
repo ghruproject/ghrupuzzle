@@ -61,6 +61,7 @@ The legacy `scripts/update_dataset.py` must not be used for new releases.
 
 ## Documentation
 
+- [Participant guide editing instructions](content/guides/README.md)
 - [Assessment platform design](docs/assessment-platform-plan.md)
 - [Deployment and operations](docs/deployment-and-operations.md)
 - [GenomePuzzle release contract](docs/genomepuzzle-contract.md)

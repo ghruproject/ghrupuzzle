@@ -19,6 +19,13 @@ function fileNameFromUrl(value: string) {
   return value.split('/').pop() ?? value;
 }
 
+const GUIDE_PATHS = {
+  assembly: '/guides/short-read-assembly',
+  hybrid: '/guides/hybrid-assembly',
+  typing: '/guides/genotyping',
+  outbreak: '/guides/outbreak-analysis',
+} as const;
+
 function ReferenceList({ references }: { references: ReferenceGenome[] }) {
   return (
     <div className="space-y-3 mt-2">
@@ -169,17 +176,25 @@ export function ExercisePage<TSample extends { public_name: string }>({
           ) : null}
         </div>
         {definition.mode === 'challenge' && definition.practiceHref ? (
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap gap-3">
             <Link
               href={definition.practiceHref}
               className="inline-flex items-center justify-center px-4 py-2 rounded-xl font-bold border border-[var(--gx-border)] text-[var(--gx-text)] hover:text-[var(--gx-text-bright)] bg-transparent transition-colors text-sm"
             >
               Open practice version →
             </Link>
+            <Link href={GUIDE_PATHS[definition.exercise]} className="gx-btn gx-btn-secondary">
+              Read participant guide
+            </Link>
           </div>
         ) : definition.mode === 'practice' ? (
-          <div className="mt-4 text-sm text-[var(--gx-text-muted)]">
-            No account is required to view the instructions or download the practice data.
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Link href={GUIDE_PATHS[definition.exercise]} className="gx-btn gx-btn-secondary">
+              Read participant guide
+            </Link>
+            <span className="text-sm text-[var(--gx-text-muted)]">
+              No account is required to view the instructions or download the practice data.
+            </span>
           </div>
         ) : null}
       </section>
