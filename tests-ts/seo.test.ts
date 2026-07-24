@@ -3,10 +3,12 @@ import test from 'node:test';
 import robots from '../app/robots';
 import sitemap from '../app/sitemap';
 import {
+  OPEN_GRAPH_IMAGE_URL,
   publicPageMetadata,
   SITE_DESCRIPTION,
   SITE_URL,
   SITE_VALUE_PROPOSITION,
+  TWITTER_IMAGE_URL,
 } from '../lib/seo';
 import { SOCIAL_IMAGE_ALT } from '../lib/social-image';
 
@@ -21,7 +23,9 @@ test('public metadata uses the canonical production origin and large social card
   assert.equal(metadata.openGraph?.url, '/practice');
   assert.ok(metadata.twitter && 'card' in metadata.twitter);
   assert.equal(metadata.twitter.card, 'summary_large_image');
-  assert.deepEqual(metadata.twitter.images, ['/twitter-image']);
+  assert.deepEqual(metadata.twitter.images, [TWITTER_IMAGE_URL]);
+  assert.ok(OPEN_GRAPH_IMAGE_URL.includes('?v='));
+  assert.ok(TWITTER_IMAGE_URL.includes('?v='));
 });
 
 test('social preview copy stays aligned with the homepage proposition', () => {

@@ -1,7 +1,13 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import { SiteShell } from '@/components/site-shell';
-import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/seo';
+import {
+  OPEN_GRAPH_IMAGE_URL,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_URL,
+  TWITTER_IMAGE_URL,
+} from '@/lib/seo';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -38,7 +44,7 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     images: [
       {
-        url: '/opengraph-image',
+        url: OPEN_GRAPH_IMAGE_URL,
         width: 1200,
         height: 630,
         alt: `${SITE_NAME}: microbial genomics practice and challenge exercises`,
@@ -49,7 +55,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: `${SITE_NAME} | Microbial genomics exercises`,
     description: SITE_DESCRIPTION,
-    images: ['/twitter-image'],
+    images: [TWITTER_IMAGE_URL],
   },
   robots: {
     index: true,

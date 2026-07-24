@@ -6,6 +6,8 @@ export const SITE_DESCRIPTION =
   'Complex simulated microbial genomics datasets for testing analytical proficiency and bioinformatics pipelines.';
 export const SITE_VALUE_PROPOSITION =
   'Test your bioinformatics pipelines, assess your team’s proficiency and identify areas for improvement using realistic, reproducible tasks.';
+export const OPEN_GRAPH_IMAGE_URL = '/opengraph-image?v=20260724-homepage-copy';
+export const TWITTER_IMAGE_URL = '/twitter-image?v=20260724-homepage-copy';
 
 interface PublicPageMetadataOptions {
   title: string;
@@ -36,7 +38,7 @@ export function publicPageMetadata({
       description,
       images: [
         {
-          url: '/opengraph-image',
+          url: OPEN_GRAPH_IMAGE_URL,
           width: 1200,
           height: 630,
           alt: `${SITE_NAME}: microbial genomics practice and challenge exercises`,
@@ -47,7 +49,7 @@ export function publicPageMetadata({
       card: 'summary_large_image',
       title: `${title} | ${SITE_NAME}`,
       description,
-      images: ['/twitter-image'],
+      images: [TWITTER_IMAGE_URL],
     },
   };
 }
