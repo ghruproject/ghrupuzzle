@@ -1,7 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import {
+  EXERCISE_LABELS,
+  partitionSubmissionHistory,
+  submissionModeLabel,
+  submissionStatusLabel,
+  type DashboardSubmission,
+} from '@/lib/dashboard';
 
 const dateTimeFormatter = new Intl.DateTimeFormat('en-GB', {
   dateStyle: 'medium',
@@ -9,79 +16,174 @@ const dateTimeFormatter = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'Europe/London',
 });
 
-const dateFormatter = new Intl.DateTimeFormat('en-GB', {
-  dateStyle: 'medium',
-  timeZone: 'Europe/London',
-});
+const exercisePaths = {
+  assembly: '/assembly',
+  hybrid: '/hybrid-assembly',
+  typing: '/typing',
+  outbreak: '/outbreak',
+} as const;
 
-interface Submission {
-  id: string;
-  original_filename: string;
-  submitted_at: string;
-  status: string;
-  earned: number | null;
-  possible: number | null;
-  passed: number | null;
-  provisional: number | null;
+function submissionHref(submission: DashboardSubmission): string {
+  const path = exercisePaths[submission.exercise];
+  return submission.mode === 'practice' ? `${path}/practice` : path;
 }
 
-interface Certificate {
-  id: string;
-  public_code: string;
-  issued_at: string;
-  revoked_at: string | null;
-  round_title: string;
+function statusColours(status: ReturnType<typeof submissionStatusLabel>) {
+  if (status === 'Passed') {
+    return {
+      colour: 'var(--gx-success)',
+      background: 'color-mix(in srgb, var(--gx-success) 10%, transparent)',
+    };
+  }
+  if (status === 'Under review') {
+    return {
+      colour: 'var(--gx-warning)',
+      background: 'color-mix(in srgb, var(--gx-warning) 12%, transparent)',
+    };
+  }
+  return {
+    colour: 'var(--gx-text-bright)',
+    background: 'var(--gx-accent-dim)',
+  };
 }
 
-export function ParticipantRecord() {
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [certificates, setCertificates] = useState<Certificate[]>([]);
-  const [reviewSubmissionId, setReviewSubmissionId] = useState<string | null>(null);
+function SubmissionCard({
+  submission,
+  onView,
+  onReview,
+  compact = false,
+}: {
+  submission: DashboardSubmission;
+  onView: () => void;
+  onReview: () => void;
+  compact?: boolean;
+}) {
+  const status = submissionStatusLabel(submission);
+  const colours = statusColours(status);
+  const canRequestReview = !['flagged', 'reviewed'].includes(submission.status);
+
+  return (
+    <article
+      className={`rounded-xl border border-[var(--gx-border)] bg-[var(--gx-surface)] ${
+        compact ? 'p-4' : 'p-5'
+      }`}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-[var(--gx-accent)]">
+              {submissionModeLabel(submission.mode)}
+            </span>
+            <span className="text-xs text-[var(--gx-text-muted)]">
+              Attempt {submission.attempt_number}
+            </span>
+          </div>
+          <h3 className="m-0 text-lg font-bold text-[var(--gx-text)]">
+            {EXERCISE_LABELS[submission.exercise]}
+          </h3>
+          <p className="mb-0 mt-1 text-sm text-[var(--gx-text-muted)]">
+            {dateTimeFormatter.format(new Date(submission.submitted_at))}
+          </p>
+        </div>
+        <span
+          className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold"
+          style={{
+            color: colours.colour,
+            background: colours.background,
+          }}
+        >
+          {status === 'Passed' ? '✓ ' : ''}
+          {status}
+        </span>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
+        <div>
+          <span className="block text-xs uppercase tracking-wider text-[var(--gx-text-muted)]">
+            Score
+          </span>
+          <span className="font-bold text-[var(--gx-text)]">
+            {submission.earned == null || submission.possible == null
+              ? 'Pending assessment'
+              : `${submission.earned}/${submission.possible}`}
+          </span>
+        </div>
+        <div className="ml-auto flex flex-wrap gap-2">
+          <button
+            className="gx-btn gx-btn-secondary"
+            type="button"
+            onClick={onView}
+          >
+            View results
+          </button>
+          {canRequestReview ? (
+            <button
+              className="gx-btn gx-btn-secondary"
+              type="button"
+              onClick={onReview}
+            >
+              Request review
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+export function ParticipantRecord({
+  submissions,
+  loading,
+  onSubmissionChange,
+}: {
+  submissions: DashboardSubmission[];
+  loading: boolean;
+  onSubmissionChange: (submission: DashboardSubmission) => void;
+}) {
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [selectedResult, setSelectedResult] =
+    useState<DashboardSubmission | null>(null);
+  const [reviewSubmission, setReviewSubmission] =
+    useState<DashboardSubmission | null>(null);
   const [reviewReason, setReviewReason] = useState('');
   const [reviewError, setReviewError] = useState('');
   const [reviewBusy, setReviewBusy] = useState(false);
+  const history = useMemo(
+    () => partitionSubmissionHistory(submissions),
+    [submissions],
+  );
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/submissions').then((response) => response.json() as Promise<{ submissions: Submission[] }>),
-      fetch('/api/certificates').then((response) => response.json() as Promise<{ certificates: Certificate[] }>),
-    ]).then(([submissionResult, certificateResult]) => {
-      setSubmissions(submissionResult.submissions ?? []);
-      setCertificates(certificateResult.certificates ?? []);
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!reviewSubmissionId) return;
-
+    if (!selectedResult && !reviewSubmission) return;
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !reviewBusy) {
-        setReviewSubmissionId(null);
-        setReviewReason('');
-        setReviewError('');
-      }
+      if (event.key !== 'Escape' || reviewBusy) return;
+      setSelectedResult(null);
+      setReviewSubmission(null);
+      setReviewReason('');
+      setReviewError('');
     }
-
     document.addEventListener('keydown', closeOnEscape);
     return () => document.removeEventListener('keydown', closeOnEscape);
-  }, [reviewBusy, reviewSubmissionId]);
+  }, [reviewBusy, reviewSubmission, selectedResult]);
 
-  function openReviewDialog(submissionId: string) {
-    setReviewSubmissionId(submissionId);
+  function openReview(submission: DashboardSubmission) {
+    setSelectedResult(null);
+    setReviewSubmission(submission);
     setReviewReason('');
     setReviewError('');
   }
 
-  function closeReviewDialog() {
+  function closeModals() {
     if (reviewBusy) return;
-    setReviewSubmissionId(null);
+    setSelectedResult(null);
+    setReviewSubmission(null);
     setReviewReason('');
     setReviewError('');
   }
 
   async function requestReview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!reviewSubmissionId) return;
+    if (!reviewSubmission) return;
 
     setReviewBusy(true);
     setReviewError('');
@@ -89,25 +191,21 @@ export function ParticipantRecord() {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        submissionId: reviewSubmissionId,
+        submissionId: reviewSubmission.id,
         reason: reviewReason.trim(),
       }),
     });
     if (response.ok) {
-      setSubmissions((current) =>
-        current.map((item) =>
-          item.id === reviewSubmissionId ? { ...item, status: 'flagged' } : item,
-        ),
-      );
-      setReviewSubmissionId(null);
+      onSubmissionChange({ ...reviewSubmission, status: 'flagged' });
+      setReviewSubmission(null);
       setReviewReason('');
-      setReviewError('');
     } else {
       const result = (await response.json().catch(() => null)) as
         | { error?: string }
         | null;
       setReviewError(
-        result?.error ?? 'The review request could not be submitted. Please try again.',
+        result?.error ??
+          'The review request could not be submitted. Please try again.',
       );
     }
     setReviewBusy(false);
@@ -115,62 +213,179 @@ export function ParticipantRecord() {
 
   return (
     <>
-      <section id="submissions" className="card mb-8 scroll-mt-24">
-        <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">Your submissions</h2>
-        {submissions.length ? (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse min-w-[640px]">
-              <thead>
-                <tr>
-                  {['File', 'Submitted', 'Score', 'Status', ''].map((label) => (
-                    <th
-                      key={label || 'actions'}
-                      className="px-4 py-3 border-b border-[var(--gx-border)] text-left text-xs uppercase tracking-wider text-[var(--gx-text-muted)]"
-                    >
-                      {label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {submissions.map((submission) => (
-                  <tr key={submission.id}>
-                    <td className="px-4 py-3 border-b border-[var(--gx-border)]">{submission.original_filename}</td>
-                    <td className="px-4 py-3 border-b border-[var(--gx-border)]">{dateTimeFormatter.format(new Date(submission.submitted_at))}</td>
-                    <td className="px-4 py-3 border-b border-[var(--gx-border)]">{submission.earned == null ? '—' : `${submission.earned}/${submission.possible}`}</td>
-                    <td className="px-4 py-3 border-b border-[var(--gx-border)]">
-                      <span className="inline-flex items-center gap-1 font-semibold text-[var(--gx-success)]">
-                        ✓ {submission.provisional ? 'Submitted — provisional' : submission.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 border-b border-[var(--gx-border)]">
-                      {!['flagged', 'reviewed'].includes(submission.status) ? (
-                        <button
-                          className="gx-btn gx-btn-secondary"
-                          type="button"
-                          onClick={() => openReviewDialog(submission.id)}
-                        >
-                          Request review
-                        </button>
-                      ) : submission.status}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <section
+        id="submissions"
+        className="card mb-8 scroll-mt-24"
+        aria-labelledby="submission-history-title"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="mb-2 inline-flex text-xs font-extrabold uppercase tracking-widest text-[var(--gx-accent)]">
+              Results
+            </div>
+            <h2
+              id="submission-history-title"
+              className="m-0 text-2xl font-bold text-[var(--gx-text)]"
+            >
+              Latest submissions
+            </h2>
+            <p className="mb-0 mt-2 text-[var(--gx-text-muted)]">
+              Your most recent attempt for each exercise is shown first.
+            </p>
+          </div>
+          {history.earlier.length ? (
+            <button
+              className="gx-btn gx-btn-secondary self-start"
+              type="button"
+              onClick={() => setHistoryOpen((current) => !current)}
+              aria-expanded={historyOpen}
+            >
+              {historyOpen
+                ? 'Hide attempt history'
+                : `View attempt history (${history.earlier.length})`}
+            </button>
+          ) : null}
+        </div>
+
+        {loading ? (
+          <p className="mb-0 mt-5 text-[var(--gx-text-muted)]">
+            Loading submissions…
+          </p>
+        ) : history.latest.length ? (
+          <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {history.latest.map((submission) => (
+              <SubmissionCard
+                key={submission.id}
+                submission={submission}
+                onView={() => setSelectedResult(submission)}
+                onReview={() => openReview(submission)}
+              />
+            ))}
           </div>
         ) : (
-          <p className="text-[var(--gx-text-muted)]">
-            No submissions yet. Choose a <Link href="/#practice">practice exercise</Link> to get started.
+          <p className="mb-0 mt-5 text-[var(--gx-text-muted)]">
+            No submissions yet. Choose a{' '}
+            <Link href="/#practice">practice exercise</Link> to get started.
           </p>
         )}
+
+        {historyOpen && history.earlier.length ? (
+          <div className="mt-6 border-t border-[var(--gx-border)] pt-6">
+            <h3 className="mt-0 text-lg font-bold text-[var(--gx-text)]">
+              Earlier attempts
+            </h3>
+            <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+              {history.earlier.map((submission) => (
+                <SubmissionCard
+                  key={submission.id}
+                  submission={submission}
+                  onView={() => setSelectedResult(submission)}
+                  onReview={() => openReview(submission)}
+                  compact
+                />
+              ))}
+            </div>
+          </div>
+        ) : null}
       </section>
-      {reviewSubmissionId ? (
+
+      {selectedResult ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-[2px]"
           role="presentation"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) closeReviewDialog();
+            if (event.target === event.currentTarget) closeModals();
+          }}
+        >
+          <section
+            className="w-full max-w-lg overflow-hidden rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-surface)] shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="result-dialog-title"
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-[var(--gx-border)] bg-[var(--gx-bg-alt)] px-6 py-5">
+              <div>
+                <p className="mb-1 mt-0 text-xs font-bold uppercase tracking-[0.16em] text-[var(--gx-accent)]">
+                  {submissionModeLabel(selectedResult.mode)} result
+                </p>
+                <h2
+                  id="result-dialog-title"
+                  className="m-0 text-xl font-bold text-[var(--gx-text)]"
+                >
+                  {EXERCISE_LABELS[selectedResult.exercise]}
+                </h2>
+              </div>
+              <button
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--gx-border)] bg-[var(--gx-surface)] text-xl text-[var(--gx-text-muted)]"
+                type="button"
+                onClick={closeModals}
+                aria-label="Close result summary"
+              >
+                ×
+              </button>
+            </div>
+            <dl className="grid grid-cols-2 gap-4 px-6 py-5 text-sm">
+              <div>
+                <dt className="text-[var(--gx-text-muted)]">Attempt</dt>
+                <dd className="m-0 mt-1 font-bold text-[var(--gx-text)]">
+                  {selectedResult.attempt_number}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[var(--gx-text-muted)]">Status</dt>
+                <dd className="m-0 mt-1 font-bold text-[var(--gx-text)]">
+                  {submissionStatusLabel(selectedResult)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[var(--gx-text-muted)]">Score</dt>
+                <dd className="m-0 mt-1 font-bold text-[var(--gx-text)]">
+                  {selectedResult.earned == null ||
+                  selectedResult.possible == null
+                    ? 'Pending assessment'
+                    : `${selectedResult.earned}/${selectedResult.possible}`}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[var(--gx-text-muted)]">Submitted</dt>
+                <dd className="m-0 mt-1 font-bold text-[var(--gx-text)]">
+                  {dateTimeFormatter.format(
+                    new Date(selectedResult.submitted_at),
+                  )}
+                </dd>
+              </div>
+              <div className="col-span-2">
+                <dt className="text-[var(--gx-text-muted)]">Result sheet</dt>
+                <dd className="m-0 mt-1 break-all font-mono text-[var(--gx-text)]">
+                  {selectedResult.original_filename}
+                </dd>
+              </div>
+            </dl>
+            <div className="flex flex-wrap justify-end gap-3 border-t border-[var(--gx-border)] bg-[var(--gx-bg-alt)] px-6 py-4">
+              <Link
+                className="gx-btn gx-btn-secondary"
+                href={submissionHref(selectedResult)}
+              >
+                Open exercise
+              </Link>
+              <button
+                className="gx-btn gx-btn-primary"
+                type="button"
+                onClick={closeModals}
+              >
+                Done
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {reviewSubmission ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-[2px]"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeModals();
           }}
         >
           <form
@@ -194,9 +409,9 @@ export function ParticipantRecord() {
                 </h2>
               </div>
               <button
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--gx-border)] bg-[var(--gx-surface)] text-xl leading-none text-[var(--gx-text-muted)] transition hover:border-[var(--gx-accent)] hover:text-[var(--gx-text)]"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--gx-border)] bg-[var(--gx-surface)] text-xl text-[var(--gx-text-muted)]"
                 type="button"
-                onClick={closeReviewDialog}
+                onClick={closeModals}
                 disabled={reviewBusy}
                 aria-label="Close review request"
               >
@@ -216,7 +431,10 @@ export function ParticipantRecord() {
                 className="mt-5 block text-sm font-semibold text-[var(--gx-text)]"
                 htmlFor="review-reason"
               >
-                Explanation <span className="font-normal text-[var(--gx-text-muted)]">(optional)</span>
+                Explanation{' '}
+                <span className="font-normal text-[var(--gx-text-muted)]">
+                  (optional)
+                </span>
               </label>
               <textarea
                 id="review-reason"
@@ -228,25 +446,12 @@ export function ParticipantRecord() {
                 disabled={reviewBusy}
                 autoFocus
               />
-              <div className="mt-2 flex items-start justify-between gap-4">
-                <p className="m-0 text-xs text-[var(--gx-text-muted)]">
-                  Do not include passwords or confidential data.
-                </p>
-                <span className="shrink-0 text-xs text-[var(--gx-text-muted)]">
-                  {reviewReason.length}/2,000
-                </span>
+              <div className="mt-2 flex justify-between gap-4 text-xs text-[var(--gx-text-muted)]">
+                <span>Do not include passwords or confidential data.</span>
+                <span className="shrink-0">{reviewReason.length}/2,000</span>
               </div>
-
               {reviewError ? (
-                <p
-                  className="mt-4 rounded-lg border px-3 py-2 text-sm font-medium text-[var(--gx-error)]"
-                  style={{
-                    borderColor: 'var(--gx-error)',
-                    background:
-                      'color-mix(in srgb, var(--gx-error) 8%, transparent)',
-                  }}
-                  role="alert"
-                >
+                <p className="mt-4 text-sm text-[var(--gx-error)]" role="alert">
                   {reviewError}
                 </p>
               ) : null}
@@ -256,7 +461,7 @@ export function ParticipantRecord() {
               <button
                 className="gx-btn gx-btn-secondary"
                 type="button"
-                onClick={closeReviewDialog}
+                onClick={closeModals}
                 disabled={reviewBusy}
               >
                 Cancel
@@ -272,25 +477,6 @@ export function ParticipantRecord() {
           </form>
         </div>
       ) : null}
-      <section className="card">
-        <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">Your certificates</h2>
-        {certificates.length ? certificates.map((certificate) => (
-          <article key={certificate.id}>
-            <h3 className="text-lg font-semibold text-[var(--gx-text)]">{certificate.round_title}</h3>
-            <p className="text-[var(--gx-text-muted)]">Issued {dateFormatter.format(new Date(certificate.issued_at))}</p>
-            {certificate.revoked_at ? <span className="inline-flex items-center px-3 py-1 rounded-full border border-[var(--gx-border)] bg-[var(--gx-accent-dim)] text-[var(--gx-text-bright)] text-xs font-semibold">Revoked</span> : (
-              <div className="flex flex-wrap gap-3 mt-4">
-                <a className="gx-btn gx-btn-primary" href={`/api/certificates/${certificate.id}/download`}>Download PDF</a>
-                <Link className="gx-btn gx-btn-secondary" href={`/verify/${certificate.public_code}`}>Verify</Link>
-              </div>
-            )}
-          </article>
-        )) : (
-          <p className="text-[var(--gx-text-muted)]">
-            Official certificates will appear here after a completed challenge has been assessed.
-          </p>
-        )}
-      </section>
     </>
   );
 }

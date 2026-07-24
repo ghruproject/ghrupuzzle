@@ -59,7 +59,10 @@ const MODULES: Array<
   },
 ];
 
-export function buildCourseModules(submissions: CourseSubmission[]): CourseModule[] {
+export function buildCourseModules(
+  submissions: CourseSubmission[],
+  mode: SubmissionMode = 'practice',
+): CourseModule[] {
   return MODULES.map((module) => {
     const exerciseSubmissions = submissions
       .filter((submission) => submission.exercise === module.exercise)
@@ -67,11 +70,14 @@ export function buildCourseModules(submissions: CourseSubmission[]): CourseModul
         (left, right) =>
           new Date(right.submitted_at).getTime() - new Date(left.submitted_at).getTime(),
       );
-    const latestSubmission = exerciseSubmissions[0] ?? null;
+    const modeSubmissions = exerciseSubmissions.filter(
+      (submission) => submission.mode === mode,
+    );
+    const latestSubmission = modeSubmissions[0] ?? null;
     return {
       ...module,
       submitted: latestSubmission !== null,
-      passed: exerciseSubmissions.some((submission) => submission.passed === 1),
+      passed: modeSubmissions.some((submission) => submission.passed === 1),
       latestSubmission,
       practiceSubmitted: exerciseSubmissions.some((submission) => submission.mode === 'practice'),
       challengeSubmitted: exerciseSubmissions.some((submission) => submission.mode === 'challenge'),

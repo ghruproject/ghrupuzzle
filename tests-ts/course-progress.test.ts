@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildCourseModules, type CourseSubmission } from '../lib/course-progress';
 
-test('course progress marks submitted modules and keeps the latest attempt', () => {
+test('course progress follows the selected practice or challenge mode', () => {
   const submissions: CourseSubmission[] = [
     {
       exercise: 'assembly',
@@ -30,21 +30,42 @@ test('course progress marks submitted modules and keeps the latest attempt', () 
     },
   ];
 
-  const modules = buildCourseModules(submissions);
-  assert.equal(modules.length, 4);
-  assert.equal(modules.filter((module) => module.submitted).length, 2);
-  assert.equal(modules.find((module) => module.exercise === 'assembly')?.passed, true);
+  const practiceModules = buildCourseModules(submissions);
+  assert.equal(practiceModules.length, 4);
+  assert.equal(practiceModules.filter((module) => module.submitted).length, 2);
   assert.equal(
-    modules.find((module) => module.exercise === 'assembly')?.latestSubmission?.earned,
+    practiceModules.find((module) => module.exercise === 'assembly')?.passed,
+    false,
+  );
+  assert.equal(
+    practiceModules.find((module) => module.exercise === 'assembly')
+      ?.latestSubmission?.earned,
+    4,
+  );
+  assert.equal(
+    practiceModules.find((module) => module.exercise === 'assembly')
+      ?.practiceSubmitted,
+    true,
+  );
+  assert.equal(
+    practiceModules.find((module) => module.exercise === 'assembly')
+      ?.challengeSubmitted,
+    true,
+  );
+  assert.equal(
+    practiceModules.find((module) => module.exercise === 'hybrid')?.submitted,
+    false,
+  );
+
+  const challengeModules = buildCourseModules(submissions, 'challenge');
+  assert.equal(challengeModules.filter((module) => module.submitted).length, 1);
+  assert.equal(
+    challengeModules.find((module) => module.exercise === 'assembly')?.passed,
+    true,
+  );
+  assert.equal(
+    challengeModules.find((module) => module.exercise === 'assembly')
+      ?.latestSubmission?.earned,
     9,
   );
-  assert.equal(
-    modules.find((module) => module.exercise === 'assembly')?.practiceSubmitted,
-    true,
-  );
-  assert.equal(
-    modules.find((module) => module.exercise === 'assembly')?.challengeSubmitted,
-    true,
-  );
-  assert.equal(modules.find((module) => module.exercise === 'hybrid')?.submitted, false);
 });
