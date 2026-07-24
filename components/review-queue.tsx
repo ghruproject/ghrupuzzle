@@ -13,6 +13,37 @@ interface Review {
   earned: number;
   possible: number;
   passed: number;
+  attempt_number: number;
+  original_filename: string;
+  parsedRows: Array<Record<string, string>>;
+  parsingWarnings: string[];
+  details: {
+    items: Array<{
+      sampleId: string;
+      field: string;
+      correct: boolean;
+      submitted: string;
+      expected: string;
+      weight: number;
+    }>;
+  };
+  previousSubmissions: Array<{
+    id: string;
+    attempt_number: number;
+    original_filename: string;
+    submitted_at: string;
+    status: string;
+    earned: number;
+    possible: number;
+    passed: number;
+    review_status?: string | null;
+    resolution?: string | null;
+  }>;
+  auditTrail: Array<{
+    action: string;
+    actor_user_id: string | null;
+    created_at: string;
+  }>;
 }
 
 export function ReviewQueue() {
@@ -64,8 +95,98 @@ export function ReviewQueue() {
         <article className="card" key={review.id}>
           <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">{review.exercise}: {review.participant_name}</h2>
           <p className="text-[var(--gx-text-muted)]">{review.participant_email} · {review.release_id}</p>
+          <p className="text-sm text-[var(--gx-text-muted)]">
+            Attempt {review.attempt_number} · {review.original_filename}
+          </p>
           <p><strong>Request:</strong> {review.reason}</p>
           <p>Automatic score: {review.earned}/{review.possible} ({review.passed ? 'pass' : 'fail'})</p>
+          {review.parsingWarnings.length ? (
+            <div className="rounded-xl border border-red-400/40 p-4 mb-4">
+              <strong>Validation or parsing warnings</strong>
+              <ul className="mb-0">
+                {review.parsingWarnings.map((warning) => <li key={warning}>{warning}</li>)}
+              </ul>
+            </div>
+          ) : null}
+          <details className="mb-4">
+            <summary className="font-semibold cursor-pointer">Submitted rows</summary>
+            {review.parsedRows.length ? (
+              <div className="overflow-x-auto mt-3">
+                <table className="w-full border-collapse min-w-max text-sm">
+                  <thead>
+                    <tr>
+                      {Object.keys(review.parsedRows[0]).map((header) => (
+                        <th className="px-3 py-2 border-b border-[var(--gx-border)] text-left" key={header}>{header}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {review.parsedRows.map((row, index) => (
+                      <tr key={index}>
+                        {Object.keys(review.parsedRows[0]).map((header) => (
+                          <td className="px-3 py-2 border-b border-[var(--gx-border)]" key={header}>{row[header]}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <p>No parsed rows are available.</p>}
+          </details>
+          <details className="mb-4">
+            <summary className="font-semibold cursor-pointer">Automatic field-level scoring</summary>
+            <div className="overflow-x-auto mt-3">
+              <table className="w-full border-collapse min-w-max text-sm">
+                <thead>
+                  <tr>
+                    {['Sample', 'Field', 'Submitted', 'Expected', 'Result', 'Weight'].map((header) => (
+                      <th className="px-3 py-2 border-b border-[var(--gx-border)] text-left" key={header}>{header}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {review.details.items.map((item) => (
+                    <tr key={`${item.sampleId}-${item.field}`}>
+                      <td className="px-3 py-2 border-b border-[var(--gx-border)]">{item.sampleId}</td>
+                      <td className="px-3 py-2 border-b border-[var(--gx-border)]">{item.field}</td>
+                      <td className="px-3 py-2 border-b border-[var(--gx-border)]">{item.submitted || '—'}</td>
+                      <td className="px-3 py-2 border-b border-[var(--gx-border)]">{item.expected || '—'}</td>
+                      <td className="px-3 py-2 border-b border-[var(--gx-border)]">{item.correct ? 'Correct' : 'Incorrect'}</td>
+                      <td className="px-3 py-2 border-b border-[var(--gx-border)]">{item.weight}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
+          <details className="mb-5">
+            <summary className="font-semibold cursor-pointer">
+              Previous submissions and audit trail
+            </summary>
+            <div className="mt-3">
+              {review.previousSubmissions.length ? (
+                <ul>
+                  {review.previousSubmissions.map((submission) => (
+                    <li key={`${submission.id}-${submission.review_status ?? ''}`}>
+                      Attempt {submission.attempt_number}: {submission.earned}/{submission.possible}
+                      {' '}({submission.passed ? 'pass' : 'fail'})
+                      {submission.review_status ? ` · review ${submission.review_status}` : ''}
+                      {submission.resolution ? ` · ${submission.resolution}` : ''}
+                    </li>
+                  ))}
+                </ul>
+              ) : <p>No previous submissions.</p>}
+              <h3 className="text-base">Audit events</h3>
+              <ul>
+                {review.auditTrail.map((event, index) => (
+                  <li key={`${event.action}-${event.created_at}-${index}`}>
+                    {event.created_at}: {event.action}
+                    {event.actor_user_id ? ` by ${event.actor_user_id}` : ''}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </details>
           <form className="flex flex-col gap-4" onSubmit={(event) => decide(event, review)}>
             <label className="label">Decision
               <select className="gx-input mt-2 w-full" name="status" defaultValue="upheld">

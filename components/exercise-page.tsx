@@ -75,14 +75,6 @@ export function ExercisePage<TSample extends { public_name: string }>({
     let active = true;
 
     async function loadDataset() {
-      if (definition.mode === 'practice') {
-        const legacyResponse = await fetch(definition.datasetPath);
-        if (!legacyResponse.ok) {
-          throw new Error(`Failed to fetch ${definition.datasetPath}`);
-        }
-        return legacyResponse.json() as Promise<ExerciseDataset<TSample>>;
-      }
-
       const releasesResponse = await fetch(
         `/api/releases?exercise=${definition.exercise}&mode=${definition.mode}`,
       );
@@ -161,9 +153,21 @@ export function ExercisePage<TSample extends { public_name: string }>({
     : definition.instructions;
   const answerColumns = releaseDefinition?.fields.map((field) => ({
     name: field.name,
-    description: `${field.description}${field.required ? ' Required.' : ' Optional.'}${
-      field.scored ? ' Scored.' : ''
-    }`,
+    description: [
+      field.description,
+      field.required
+        ? 'Required.'
+        : field.required_when
+          ? `Required when ${field.required_when.field} is ${field.required_when.equals}.`
+          : 'Optional.',
+      field.allowed_values?.length
+        ? `Allowed values: ${field.allowed_values.join(', ')}.`
+        : '',
+      field.scored ? 'Scored.' : 'Supporting evidence; not scored.',
+      field.score_when
+        ? `Scored only when ${field.score_when.field} is ${field.score_when.equals}.`
+        : '',
+    ].filter(Boolean).join(' '),
   })) ?? definition.answerColumns;
 
   return (

@@ -1,3 +1,11 @@
+import {
+  conditionMatches,
+  type ContractNormalizer,
+  type ScoringPolicy,
+  type SubmissionSchema,
+} from './release-contract';
+export type { ScoringPolicy } from './release-contract';
+
 export interface AnswerSample {
   sample_id: string;
   answers: Record<string, unknown>;
@@ -9,22 +17,6 @@ export interface AnswerKey {
   exercise: string;
   mode: 'practice' | 'challenge';
   samples: AnswerSample[];
-}
-
-export interface ScoringPolicy {
-  schema_version: string;
-  release_id: string;
-  scorer_version: string;
-  pass_threshold: number;
-  require_all_samples: boolean;
-  reject_unexpected_samples: boolean;
-  fields: Array<{
-    name: string;
-    scored: boolean;
-    scorer: 'exact' | 'unordered_list' | 'partition';
-    weight: number;
-    aliases: string[];
-  }>;
 }
 
 export interface ScoreResult {
@@ -41,6 +33,7 @@ export interface ScoreResult {
     expected: string;
     weight: number;
   }>;
+  validationIssues?: SubmissionValidationIssue[];
 }
 
 const SAMPLE_ID_FIELDS = ['sample_id', 'sample', 'id', 'public_name'];
@@ -63,10 +56,20 @@ const UNCLUSTERED_TOKENS = new Set([
 type Delimiter = ',' | '\t';
 
 export class SubmissionValidationError extends Error {
-  constructor(message: string) {
+  readonly issues: SubmissionValidationIssue[];
+
+  constructor(message: string, issues: SubmissionValidationIssue[] = []) {
     super(message);
     this.name = 'SubmissionValidationError';
+    this.issues = issues;
   }
+}
+
+export interface SubmissionValidationIssue {
+  row: number | null;
+  sampleId?: string;
+  field: string;
+  message: string;
 }
 
 export function detectDelimiter(text: string): Delimiter {
@@ -205,10 +208,19 @@ export function scoreSubmission(
   csvText: string,
   answerKey: AnswerKey,
   policy?: ScoringPolicy,
+  schema?: SubmissionSchema,
 ): ScoreResult {
-  validateScoringContract(answerKey, policy);
+  validateScoringContract(answerKey, policy, schema);
   const rows = parseDelimitedText(csvText);
-  const sampleField = SAMPLE_ID_FIELDS.find((field) => field in rows[0]);
+  const schemaIdentifier = schema?.fields.find((field) => field.identifier);
+  const sampleField = [
+    schemaIdentifier?.name,
+    ...(schemaIdentifier?.aliases ?? []),
+    ...SAMPLE_ID_FIELDS,
+  ]
+    .filter((field): field is string => Boolean(field))
+    .map(normalizeKey)
+    .find((field) => field in rows[0]);
   if (!sampleField) {
     throw new SubmissionValidationError(
       `Result sheet requires one sample identifier column: ${SAMPLE_ID_FIELDS.join(', ')}`,
@@ -241,6 +253,15 @@ export function scoreSubmission(
       `Result sheet is missing assessed ${plural(missingColumns.length, 'column')}: ${missingColumns.join(', ')}`,
     );
   }
+  const validationIssues = schema
+    ? validateSubmissionRows(rows, sampleField, answerKey, schema)
+    : [];
+  if (validationIssues.length) {
+    throw new SubmissionValidationError(
+      summariseValidationIssues(validationIssues),
+      validationIssues,
+    );
+  }
   const submitted = new Map<string, Record<string, string>>();
   const submittedLabels = new Map<string, string>();
   for (const row of rows) {
@@ -270,6 +291,7 @@ export function scoreSubmission(
     const expectedEntries = policyFields
       ? policyFields
           .filter((definition) => definition.scorer !== 'partition')
+          .filter((definition) => conditionMatches(definition.score_when, sample.answers))
           .map((definition) => [definition.name, sample.answers[definition.name], definition] as const)
       : Object.entries(sample.answers).map(
           ([name, expected]) =>
@@ -281,9 +303,24 @@ export function scoreSubmission(
         continue;
       }
       const scorer = definition?.scorer ?? (field === 'bla_carb' ? 'unordered_list' : 'exact');
-      const expected = normalizeValue(rawExpected, field, scorer);
+      const expected = normalizeValue(
+        rawExpected,
+        field,
+        scorer,
+        definition?.normalizer,
+      );
       const submittedValue = submittedField(row, field, definition?.aliases ?? []);
-      const actual = normalizeValue(submittedValue, field, scorer);
+      const actual = normalizeValue(
+        submittedValue,
+        field,
+        scorer,
+        definition?.normalizer,
+      );
+      const eligibleSampleCount = definition
+        ? answerKey.samples.filter((candidate) =>
+            conditionMatches(definition.score_when, candidate.answers),
+          ).length
+        : answerKey.samples.length;
       items.push({
         sampleId: sample.sample_id,
         field,
@@ -291,7 +328,7 @@ export function scoreSubmission(
         submitted: submittedValue,
         expected: String(rawExpected ?? ''),
         weight: definition
-          ? definition.weight / answerKey.samples.length
+          ? definition.weight / eligibleSampleCount
           : 1,
       });
     }
@@ -305,6 +342,8 @@ export function scoreSubmission(
       partitionField.name,
       partitionField.aliases,
       partitionField.weight,
+      partitionField.score_when,
+      partitionField.normalizer,
     );
   } else if (answerKey.exercise === 'outbreak') {
     scoreClusterPairs(answerKey, submitted, items, 'cluster', [], undefined);
@@ -330,6 +369,7 @@ export function scoreSubmission(
     missingSamples,
     unexpectedSamples,
     items,
+    validationIssues,
   };
 }
 
@@ -385,28 +425,63 @@ function normalizeValue(
   value: unknown,
   field = '',
   scorer: ScoringPolicy['fields'][number]['scorer'] = 'exact',
+  normalizer?: ContractNormalizer,
 ): string {
-  if (scorer === 'unordered_list') {
+  if (normalizer === 'unordered_list' || scorer === 'unordered_list') {
     const values = Array.isArray(value) ? value : String(value ?? '').split(/[,;|\n]+/);
-    return [...new Set(values.map((item) => normalizeScalar(item, field)).filter(Boolean))]
+    return [...new Set(values.map((item) => normalizeCasefold(item, true)).filter(Boolean))]
       .sort()
       .join(',');
   }
   if (Array.isArray(value)) {
-    return value.map((item) => normalizeScalar(item, field)).join(',');
+    return value.map((item) => normalizeContractValue(item, field, normalizer)).join(',');
   }
-  return normalizeScalar(value, field);
+  return normalizeContractValue(value, field, normalizer);
 }
 
-function normalizeScalar(value: unknown, field: string): string {
-  let normalized = String(value ?? '')
+function normalizeContractValue(
+  value: unknown,
+  field: string,
+  normalizer?: ContractNormalizer,
+): string {
+  const trimmed = String(value ?? '').normalize('NFKC').trim().replace(/\s+/g, ' ');
+  switch (normalizer) {
+    case 'identifier':
+      return normalizeSampleId(trimmed);
+    case 'integer':
+      return /^[-+]?\d+$/.test(trimmed) ? BigInt(trimmed).toString() : trimmed;
+    case 'qc_status':
+      return trimmed.toLocaleUpperCase('en').replace(/[\s-]+/g, '_');
+    case 'sequence_type':
+      return normalizeCasefold(trimmed.replace(/^st[\s:_-]*/i, ''), false);
+    case 'species':
+    case 'trim_casefold':
+      return normalizeCasefold(trimmed, true);
+    case 'trim':
+      return trimmed;
+    case 'upper':
+      return trimmed.toLocaleUpperCase('en');
+    case 'unordered_list':
+      return normalizeCasefold(trimmed, true);
+    default:
+      return normalizeScalarFallback(trimmed, field);
+  }
+}
+
+function normalizeCasefold(value: unknown, unavailableAsBlank: boolean): string {
+  const normalized = String(value ?? '')
     .normalize('NFKC')
     .trim()
     .replace(/\s+/g, ' ')
     .toLocaleLowerCase('en');
-  if (MISSING_VALUE_TOKENS.has(normalized)) {
+  if (unavailableAsBlank && MISSING_VALUE_TOKENS.has(normalized)) {
     return '';
   }
+  return normalized;
+}
+
+function normalizeScalarFallback(value: unknown, field: string): string {
+  let normalized = normalizeCasefold(value, true);
   if (CONTROLLED_TOKEN_FIELDS.has(field)) {
     normalized = normalized.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
   }
@@ -420,23 +495,30 @@ function scoreClusterPairs(
   field: string,
   aliases: string[],
   totalWeight: number | undefined,
+  condition = null as ScoringPolicy['fields'][number]['score_when'],
+  normalizer?: ContractNormalizer,
 ): void {
-  const pairCount = (answerKey.samples.length * (answerKey.samples.length - 1)) / 2;
-  for (let left = 0; left < answerKey.samples.length; left += 1) {
-    for (let right = left + 1; right < answerKey.samples.length; right += 1) {
-      const a = answerKey.samples[left];
-      const b = answerKey.samples[right];
-      const expectedA = normalizeValue(a.answers[field], field, 'partition');
-      const expectedB = normalizeValue(b.answers[field], field, 'partition');
+  const eligibleSamples = answerKey.samples.filter((sample) =>
+    conditionMatches(condition, sample.answers),
+  );
+  const pairCount = (eligibleSamples.length * (eligibleSamples.length - 1)) / 2;
+  for (let left = 0; left < eligibleSamples.length; left += 1) {
+    for (let right = left + 1; right < eligibleSamples.length; right += 1) {
+      const a = eligibleSamples[left];
+      const b = eligibleSamples[right];
+      const expectedA = normalizeValue(a.answers[field], field, 'partition', normalizer);
+      const expectedB = normalizeValue(b.answers[field], field, 'partition', normalizer);
       const actualA = normalizeValue(
         submittedField(submitted.get(normalizeSampleId(a.sample_id)), field, aliases),
         field,
         'partition',
+        normalizer,
       );
       const actualB = normalizeValue(
         submittedField(submitted.get(normalizeSampleId(b.sample_id)), field, aliases),
         field,
         'partition',
+        normalizer,
       );
       const expectedTogether = isCluster(expectedA) && expectedA === expectedB;
       const actualTogether = isCluster(actualA) && actualA === actualB;
@@ -460,7 +542,11 @@ function isCluster(value: string): boolean {
   return !UNCLUSTERED_TOKENS.has(value);
 }
 
-function validateScoringContract(answerKey: AnswerKey, policy?: ScoringPolicy): void {
+function validateScoringContract(
+  answerKey: AnswerKey,
+  policy?: ScoringPolicy,
+  schema?: SubmissionSchema,
+): void {
   if (!answerKey.samples.length) {
     throw new Error('Answer key contains no samples');
   }
@@ -474,6 +560,19 @@ function validateScoringContract(answerKey: AnswerKey, policy?: ScoringPolicy): 
   if (policy.release_id !== answerKey.release_id) {
     throw new Error('Scoring policy and answer key release identifiers do not match');
   }
+  if (schema && (
+    schema.release_id !== answerKey.release_id
+    || schema.exercise !== answerKey.exercise
+    || schema.mode !== answerKey.mode
+  )) {
+    throw new Error('Submission schema and answer key release metadata do not match');
+  }
+  if (schema && (
+    schema.schema_version !== answerKey.schema_version
+    || policy.schema_version !== answerKey.schema_version
+  )) {
+    throw new Error('Release contract schema versions do not match');
+  }
   const scoredFields = policy.fields.filter((field) => field.scored);
   if (!scoredFields.length) {
     throw new Error('Scoring policy contains no assessed fields');
@@ -484,12 +583,155 @@ function validateScoringContract(answerKey: AnswerKey, policy?: ScoringPolicy): 
     }
     if (
       answerKey.samples.some(
-        (sample) => !Object.hasOwn(sample.answers, definition.name),
+        (sample) =>
+          conditionMatches(definition.score_when, sample.answers)
+          && !Object.hasOwn(sample.answers, definition.name),
       )
     ) {
       throw new Error(`Answer key is missing assessed field ${definition.name}`);
     }
   }
+}
+
+function validateSubmissionRows(
+  rows: Array<Record<string, string>>,
+  sampleField: string,
+  answerKey: AnswerKey,
+  schema: SubmissionSchema,
+): SubmissionValidationIssue[] {
+  const issues: SubmissionValidationIssue[] = [];
+  const expected = new Map(
+    answerKey.samples.map((sample) => [normalizeSampleId(sample.sample_id), sample.sample_id]),
+  );
+  const seen = new Map<string, number>();
+  const qcField = schema.fields.find((field) => field.name === 'qc_status');
+  const failureField = schema.fields.find((field) => field.name === 'failure_reason');
+
+  rows.forEach((row, index) => {
+    const rowNumber = index + 2;
+    const sampleId = row[sampleField]?.trim() ?? '';
+    const sampleKey = normalizeSampleId(sampleId);
+    if (!sampleKey) {
+      issues.push({
+        row: rowNumber,
+        field: schema.fields.find((field) => field.identifier)?.name ?? 'sample_id',
+        message: 'Sample identifier is required.',
+      });
+    } else if (seen.has(sampleKey)) {
+      issues.push({
+        row: rowNumber,
+        sampleId,
+        field: schema.fields.find((field) => field.identifier)?.name ?? 'sample_id',
+        message: `Duplicate sample identifier; it first appears on row ${seen.get(sampleKey)}.`,
+      });
+    } else {
+      seen.set(sampleKey, rowNumber);
+      if (!expected.has(sampleKey)) {
+        issues.push({
+          row: rowNumber,
+          sampleId,
+          field: schema.fields.find((field) => field.identifier)?.name ?? 'sample_id',
+          message: 'This sample is not part of the release.',
+        });
+      }
+    }
+
+    const values = Object.fromEntries(
+      schema.fields.map((field) => [
+        field.name,
+        submittedField(row, normalizeKey(field.name), field.aliases),
+      ]),
+    );
+    const qcStatus = qcField
+      ? normalizeValue(values[qcField.name], qcField.name, 'exact', qcField.normalizer)
+      : '';
+    const failed = qcStatus === 'FAIL';
+
+    for (const field of schema.fields) {
+      if (field.identifier) continue;
+      const submittedValue = String(values[field.name] ?? '');
+      const required = !failed && (
+        field.required
+        || (field.required_when ? conditionMatches(field.required_when, values) : false)
+      );
+      if (required && !submittedValue.trim()) {
+        issues.push({
+          row: rowNumber,
+          sampleId,
+          field: field.name,
+          message: `${field.label} is required.`,
+        });
+        continue;
+      }
+      if (field.allowed_values?.length && submittedValue.trim()) {
+        const normalised = normalizeValue(
+          submittedValue,
+          field.name,
+          field.scorer === 'identifier' ? 'exact' : field.scorer,
+          field.normalizer,
+        );
+        const allowed = field.allowed_values.map((value) =>
+          normalizeValue(
+            value,
+            field.name,
+            field.scorer === 'identifier' ? 'exact' : field.scorer,
+            field.normalizer,
+          ),
+        );
+        if (!allowed.includes(normalised)) {
+          issues.push({
+            row: rowNumber,
+            sampleId,
+            field: field.name,
+            message: `Use one of: ${field.allowed_values.join(', ')}.`,
+          });
+        }
+      }
+    }
+
+    if (qcField && failureField) {
+      const reason = normalizeValue(
+        values[failureField.name],
+        failureField.name,
+        'exact',
+        failureField.normalizer,
+      );
+      if (qcStatus === 'PASS' && reason !== 'NONE') {
+        issues.push({
+          row: rowNumber,
+          sampleId,
+          field: failureField.name,
+          message: 'A passing sample must use NONE.',
+        });
+      } else if (qcStatus === 'FAIL' && (!reason || reason === 'NONE')) {
+        issues.push({
+          row: rowNumber,
+          sampleId,
+          field: failureField.name,
+          message: 'A failed sample requires a non-NONE failure reason.',
+        });
+      }
+    }
+  });
+
+  for (const [sampleKey, sampleId] of expected) {
+    if (!seen.has(sampleKey)) {
+      issues.push({
+        row: null,
+        sampleId,
+        field: schema.fields.find((field) => field.identifier)?.name ?? 'sample_id',
+        message: `Missing sample row: ${sampleId}.`,
+      });
+    }
+  }
+  return issues;
+}
+
+function summariseValidationIssues(issues: SubmissionValidationIssue[]): string {
+  const first = issues[0];
+  const location = first.row ? `Row ${first.row}` : 'Result sheet';
+  const remainder = issues.length > 1 ? ` ${issues.length - 1} more issue${issues.length === 2 ? '' : 's'} found.` : '';
+  return `${location}, ${first.field}: ${first.message}${remainder}`;
 }
 
 function plural(count: number, noun: string): string {

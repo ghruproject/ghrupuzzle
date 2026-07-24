@@ -12,6 +12,7 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "tsx --test tests-ts/*.test.ts",
+    "accept:contract": "tsx scripts/accept_contract_2_1.ts",
     "typecheck": "tsc --noEmit",
     "cf:build": "npm run guides:build && opennextjs-cloudflare build",
     "cf:preview": "opennextjs-cloudflare preview",

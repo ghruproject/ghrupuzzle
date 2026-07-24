@@ -48,8 +48,10 @@ export function ParticipantRecord() {
   }, []);
 
   async function requestReview(submissionId: string) {
-    const reason = window.prompt('Briefly explain what should be reviewed:');
-    if (!reason) return;
+    const reason = window.prompt(
+      'Optionally explain what should be reviewed. Leave blank to submit without an explanation:',
+    );
+    if (reason === null) return;
     const response = await fetch('/api/reviews', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

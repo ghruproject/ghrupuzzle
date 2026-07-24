@@ -1,5 +1,6 @@
 import { createAuth } from './auth';
 import type { CloudflareEnv } from './cloudflare';
+import { isSupportedReleaseSchemaVersion } from './release-contract';
 
 export interface AuthenticatedUser {
   id: string;
@@ -18,14 +19,20 @@ export interface ReleaseAccess {
   opensAt: string | null;
   closesAt: string | null;
   graceSeconds: number;
+  schemaVersion: string;
+}
+
+export async function optionalUser(request: Request): Promise<AuthenticatedUser | null> {
+  const session = await (await createAuth()).api.getSession({ headers: request.headers });
+  return session?.user ?? null;
 }
 
 export async function requireUser(request: Request): Promise<AuthenticatedUser> {
-  const session = await (await createAuth()).api.getSession({ headers: request.headers });
-  if (!session) {
+  const user = await optionalUser(request);
+  if (!user) {
     throw new Response('Authentication required', { status: 401 });
   }
-  return session.user;
+  return user;
 }
 
 export async function requireRole(
@@ -46,12 +53,13 @@ export async function requireRole(
 export async function requireReleaseAccess(
   env: CloudflareEnv,
   releaseId: string,
-  userId: string,
+  userId: string | null,
   purpose: 'download' | 'submit',
   now = new Date(),
 ): Promise<ReleaseAccess> {
   const release = await env.DB.prepare(
     `SELECT d.id, d.release_id, d.exercise, d.mode, d.answer_key, d.manifest_key,
+            d.schema_version,
             d.round_id, r.opens_at, r.closes_at, r.grace_seconds,
             e.status AS enrolment_status
        FROM dataset_release d
@@ -65,7 +73,13 @@ export async function requireReleaseAccess(
     throw new Response('Release not found', { status: 404 });
   }
   const mode = String(release.mode);
+  if (!isSupportedReleaseSchemaVersion(release.schema_version)) {
+    throw new Response('Release schema is not supported', { status: 409 });
+  }
   if (mode === 'challenge') {
+    if (!userId) {
+      throw new Response('Authentication required', { status: 401 });
+    }
     if (release.enrolment_status !== 'active') {
       throw new Response('Challenge signup required', { status: 403 });
     }
@@ -77,8 +91,13 @@ export async function requireReleaseAccess(
     if (now < opensAt) {
       throw new Response('Challenge has not opened', { status: 403 });
     }
-    if (purpose === 'submit' && now > effectiveClose) {
-      throw new Response('Challenge submission window has closed', { status: 403 });
+    if (now > effectiveClose) {
+      throw new Response(
+        purpose === 'submit'
+          ? 'Challenge submission window has closed'
+          : 'Challenge download window has closed',
+        { status: 403 },
+      );
     }
   }
   return {
@@ -92,6 +111,7 @@ export async function requireReleaseAccess(
     opensAt: release.opens_at ? String(release.opens_at) : null,
     closesAt: release.closes_at ? String(release.closes_at) : null,
     graceSeconds: Number(release.grace_seconds ?? 0),
+    schemaVersion: String(release.schema_version),
   };
 }
 

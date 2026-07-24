@@ -1,21 +1,6 @@
 import { getEnv } from '@/lib/cloudflare';
-import { jsonError, requireReleaseAccess, requireUser } from '@/lib/assessment';
-
-const FIELD_GUIDANCE: Partial<
-  Record<
-    'typing' | 'assembly' | 'hybrid' | 'outbreak',
-    Record<string, string>
-  >
-> = {
-  assembly: {
-    error:
-      'Detected problem type. Leave blank when no problem is detected; otherwise use CONTAMINATED or LOW_COVERAGE.',
-  },
-  hybrid: {
-    error:
-      'Detected problem type. Leave blank when no problem is detected; otherwise use CONTAMINATED or LOW_LONG_COVERAGE.',
-  },
-};
+import { jsonError, optionalUser, requireReleaseAccess } from '@/lib/assessment';
+import type { ScoringPolicy, SubmissionSchema } from '@/lib/release-contract';
 
 export async function GET(
   request: Request,
@@ -23,17 +8,19 @@ export async function GET(
 ): Promise<Response> {
   try {
     const env = await getEnv();
-    const user = await requireUser(request);
+    const user = await optionalUser(request);
     const { id } = await context.params;
-    const release = await requireReleaseAccess(env, id, user.id, 'download');
+    const release = await requireReleaseAccess(env, id, user?.id ?? null, 'download');
     const bucket = release.mode === 'practice' ? env.PRACTICE_ASSETS : env.PRIVATE_ASSETS;
     const prefix = release.manifestKey.slice(0, release.manifestKey.lastIndexOf('/'));
-    const [object, submissionObject, instructionsObject] = await Promise.all([
+    const policyKey = release.answerKey.replace(/answer_key\.json$/, 'scoring_policy.json');
+    const [object, submissionObject, instructionsObject, policyObject] = await Promise.all([
       bucket.get(release.manifestKey),
       bucket.get(`${prefix}/submission_schema.json`),
       bucket.get(`${prefix}/instructions.md`),
+      env.PRIVATE_ASSETS.get(policyKey),
     ]);
-    if (!object || !submissionObject || !instructionsObject) {
+    if (!object || !submissionObject || !instructionsObject || !policyObject) {
       return Response.json({ error: 'Release manifest is unavailable' }, { status: 503 });
     }
     const manifest = (await object.json()) as {
@@ -45,15 +32,19 @@ export async function GET(
         metadata?: Record<string, unknown>;
       }>;
     };
-    const submission = (await submissionObject.json()) as {
-      fields: Array<{
-        name: string;
-        label: string;
-        description: string;
-        required: boolean;
-        scored: boolean;
-      }>;
-    };
+    const submission = (await submissionObject.json()) as SubmissionSchema;
+    const policy = (await policyObject.json()) as ScoringPolicy;
+    if (
+      submission.release_id !== release.releaseId
+      || submission.exercise !== release.exercise
+      || submission.mode !== release.mode
+      || submission.schema_version !== release.schemaVersion
+      || policy.release_id !== release.releaseId
+      || policy.schema_version !== release.schemaVersion
+    ) {
+      throw new Error(`Release contracts do not match registration ${release.id}`);
+    }
+    const scoringFields = new Map(policy.fields.map((field) => [field.name, field]));
     const instructionText = await instructionsObject.text();
     const instructions = instructionText
       .split(/\r?\n/)
@@ -88,8 +79,8 @@ export async function GET(
         instructions,
         fields: submission.fields.map((field) => ({
           ...field,
-          description:
-            FIELD_GUIDANCE[release.exercise]?.[field.name] ?? field.description,
+          score_when: scoringFields.get(field.name)?.score_when ?? null,
+          scored: scoringFields.get(field.name)?.scored ?? field.scored,
         })),
       },
       access: {

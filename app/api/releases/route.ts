@@ -1,5 +1,5 @@
 import { getEnv } from '@/lib/cloudflare';
-import { jsonError, requireUser } from '@/lib/assessment';
+import { jsonError, optionalUser } from '@/lib/assessment';
 
 const EXERCISES = new Set(['typing', 'assembly', 'hybrid', 'outbreak']);
 const MODES = new Set(['practice', 'challenge']);
@@ -7,12 +7,15 @@ const MODES = new Set(['practice', 'challenge']);
 export async function GET(request: Request): Promise<Response> {
   try {
     const env = await getEnv();
-    const user = await requireUser(request);
+    const user = await optionalUser(request);
     const url = new URL(request.url);
     const exercise = url.searchParams.get('exercise') ?? '';
     const mode = url.searchParams.get('mode') ?? '';
     if (!EXERCISES.has(exercise) || !MODES.has(mode)) {
       return Response.json({ error: 'Valid exercise and mode are required' }, { status: 400 });
+    }
+    if (mode === 'challenge' && !user) {
+      return new Response('Authentication required', { status: 401 });
     }
     const rows = await env.DB.prepare(
       `SELECT d.id, d.release_id, d.exercise, d.mode, r.opens_at, r.closes_at
@@ -30,7 +33,7 @@ export async function GET(request: Request): Promise<Response> {
           )
         ORDER BY d.published_at DESC`,
     )
-      .bind(user.id, exercise, mode)
+      .bind(user?.id ?? null, exercise, mode)
       .all<Record<string, unknown>>();
     return Response.json({
       releases: rows.results.map((row) => ({

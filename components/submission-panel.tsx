@@ -1,13 +1,75 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import type { ExerciseMode } from '@/lib/exercises';
+import {
+  conditionMatches,
+  type ContractCondition,
+  type SubmissionField,
+} from '@/lib/release-contract';
 
 interface AvailableRelease {
   id: string;
   releaseId: string;
+}
+
+interface ParticipantField extends SubmissionField {
+  score_when?: ContractCondition | null;
+}
+
+interface ReleaseDetails {
+  samples: Array<{ public_name: string }>;
+  sample_sheet: { filename?: string; url: string };
+  releaseDefinition: {
+    fields: ParticipantField[];
+  };
+}
+
+interface ValidationIssue {
+  row: number | null;
+  sampleId?: string;
+  field: string;
+  message: string;
+}
+
+interface ScoreItem {
+  sampleId: string;
+  field: string;
+  correct: boolean;
+  submitted: string;
+  expected: string;
+}
+
+interface SubmissionResult {
+  error?: string;
+  issues?: ValidationIssue[];
+  submissionId?: string;
+  attemptNumber?: number;
+  submittedAt?: string;
+  earned?: number;
+  possible?: number;
+  passed?: boolean;
+  details?: { items: ScoreItem[] };
+}
+
+type SubmissionRows = Record<string, Record<string, string>>;
+
+function escapeCsv(value: string): string {
+  return /[",\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
+}
+
+function buildCsv(fields: ParticipantField[], sampleIds: string[], rows: SubmissionRows): string {
+  const header = fields.map((field) => escapeCsv(field.name)).join(',');
+  const body = sampleIds.map((sampleId) =>
+    fields.map((field) => escapeCsv(rows[sampleId]?.[field.name] ?? '')).join(','),
+  );
+  return [header, ...body].join('\n');
+}
+
+function issueKey(sampleId: string | undefined, field: string): string {
+  return `${sampleId ?? ''}\u0000${field}`;
 }
 
 export function SubmissionPanel({
@@ -20,69 +82,153 @@ export function SubmissionPanel({
   datasetAvailable?: boolean;
 }) {
   const [release, setRelease] = useState<AvailableRelease | null>(null);
+  const [details, setDetails] = useState<ReleaseDetails | null>(null);
+  const [rows, setRows] = useState<SubmissionRows>({});
   const [authRequired, setAuthRequired] = useState(true);
   const [message, setMessage] = useState('');
+  const [issues, setIssues] = useState<ValidationIssue[]>([]);
+  const [feedback, setFeedback] = useState<SubmissionResult | null>(null);
   const [busy, setBusy] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
     if (!datasetAvailable) return;
-    fetch(`/api/releases?exercise=${exercise}&mode=${mode}`)
-      .then(async (response) => {
-        if (response.status === 401) {
-          setAuthRequired(true);
+    let active = true;
+    Promise.all([
+      fetch(`/api/releases?exercise=${exercise}&mode=${mode}`),
+      fetch('/api/submissions'),
+    ])
+      .then(async ([releaseResponse, sessionResponse]) => {
+        if (releaseResponse.status === 401) {
+          if (active) setAuthRequired(true);
           return null;
         }
-        if (!response.ok) {
+        if (!releaseResponse.ok) {
           throw new Error('Release availability could not be checked');
         }
-        setAuthRequired(false);
-        return response.json() as Promise<{ releases: AvailableRelease[] }>;
+        if (active) setAuthRequired(sessionResponse.status === 401);
+        const result = (await releaseResponse.json()) as { releases: AvailableRelease[] };
+        const selected = result.releases[0] ?? null;
+        if (!selected) return null;
+        const detailResponse = await fetch(`/api/releases/${encodeURIComponent(selected.id)}`);
+        if (!detailResponse.ok) {
+          throw new Error('Release submission contract could not be loaded');
+        }
+        return {
+          release: selected,
+          details: (await detailResponse.json()) as ReleaseDetails,
+        };
       })
-      .then((result) => setRelease(result?.releases[0] ?? null))
-      .catch(() => setMessage('Release availability could not be checked.'));
+      .then((result) => {
+        if (!active || !result) return;
+        setRelease(result.release);
+        setDetails(result.details);
+        const initialRows = Object.fromEntries(
+          result.details.samples.map((sample) => [
+            sample.public_name,
+            {
+              sample_id: sample.public_name,
+              failure_reason: 'NONE',
+            },
+          ]),
+        );
+        setRows(initialRows);
+      })
+      .catch(() => {
+        if (active) setMessage('Release availability could not be checked.');
+      });
+    return () => {
+      active = false;
+    };
   }, [datasetAvailable, exercise, mode]);
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!release) return;
-    const form = event.currentTarget;
+  const fields = details?.releaseDefinition.fields ?? [];
+  const sampleIds = useMemo(
+    () => details?.samples.map((sample) => sample.public_name) ?? [],
+    [details],
+  );
+  const issueMap = useMemo(
+    () => new Map(issues.map((issue) => [issueKey(issue.sampleId, issue.field), issue])),
+    [issues],
+  );
+
+  function updateValue(sampleId: string, field: string, value: string) {
+    setRows((current) => {
+      const row = { ...current[sampleId], [field]: value };
+      if (field === 'qc_status') {
+        row.failure_reason = value === 'PASS' ? 'NONE' : value === 'FAIL' ? '' : row.failure_reason;
+      }
+      return { ...current, [sampleId]: row };
+    });
+    setIssues((current) =>
+      current.filter((issue) => issueKey(issue.sampleId, issue.field) !== issueKey(sampleId, field)),
+    );
+  }
+
+  async function postSubmission(file: File): Promise<boolean> {
+    if (!release) return false;
     setBusy(true);
     setMessage('');
-    const formData = new FormData(form);
+    setIssues([]);
+    setFeedback(null);
+    const formData = new FormData();
     formData.set('releaseId', release.id);
+    formData.set('file', file);
     try {
       const response = await fetch('/api/submissions', { method: 'POST', body: formData });
       const contentType = response.headers.get('content-type') ?? '';
-      const result = contentType.includes('application/json')
-        ? ((await response.json()) as {
-            error?: string;
-            earned?: number;
-            possible?: number;
-            passed?: boolean;
-          })
+      const result: SubmissionResult = contentType.includes('application/json')
+        ? ((await response.json()) as SubmissionResult)
         : { error: (await response.text()).trim() };
       if (!response.ok) {
+        setIssues(result.issues ?? []);
         setMessage(result.error || 'Submission failed.');
-        return;
+        return false;
       }
-      setMessage(
-        mode === 'challenge'
-          ? 'Submitted successfully. Your challenge result has been recorded; scores will be available after assessment.'
-          : `Submitted successfully. Provisional score: ${result.earned}/${result.possible} — ${
-              result.passed ? 'pass' : 'not yet passed'
-            }.`,
-      );
-      form.reset();
+      setFeedback(result);
+      if (mode === 'challenge') {
+        const submitted = result.submittedAt
+          ? new Date(result.submittedAt).toLocaleString('en-GB')
+          : 'just now';
+        setMessage(
+          `Submission received ${submitted}. This is version ${result.attemptNumber}. You may replace it before the challenge closes.`,
+        );
+      } else {
+        setMessage(
+          `Practice submission scored: ${result.earned}/${result.possible} — ${
+            result.passed ? 'pass' : 'not yet passed'
+          }. You can revise and submit again at any time.`,
+        );
+      }
+      return true;
     } catch {
       setMessage('Submission could not be completed. Check your connection and try again.');
+      return false;
     } finally {
       setBusy(false);
     }
   }
 
+  async function submitStructured(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const csv = buildCsv(fields, sampleIds, rows);
+    await postSubmission(
+      new File([csv], `${release?.releaseId ?? exercise}-results.csv`, {
+        type: 'text/csv;charset=utf-8',
+      }),
+    );
+  }
+
+  async function submitUpload(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const upload = new FormData(form).get('file');
+    if (!(upload instanceof File) || !upload.size) return;
+    if (await postSubmission(upload)) form.reset();
+  }
+
   return (
-    <section className="card">
+    <section className="card md:col-span-2">
       <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">Submit results</h2>
       {!datasetAvailable ? (
         <p className="text-[var(--gx-text-muted)]">
@@ -91,8 +237,8 @@ export function SubmissionPanel({
       ) : authRequired ? (
         <div className="flex flex-col gap-3">
           <p className="text-[var(--gx-text-muted)] m-0">
-            The preview and downloads are public. Sign in or create an account when you are ready
-            to submit your completed result sheet for assessment and feedback.
+            The preview, result-sheet contract and practice downloads are public. Sign in or create
+            an account when you are ready to complete and submit your results.
           </p>
           <Link
             className="gx-btn gx-btn-primary self-start"
@@ -101,31 +247,192 @@ export function SubmissionPanel({
             Sign in to submit
           </Link>
         </div>
-      ) : release ? (
-        <form className="flex flex-col gap-4" onSubmit={submit}>
-          <div>
-            <label className="label" htmlFor={`${exercise}-${mode}-submission`}>
-              Completed CSV or TSV result sheet
-            </label>
-            <p className="text-sm text-[var(--gx-text-muted)] mt-1 mb-0">
-              Use the supplied sample sheet, keep one row per sample and retain every assessed
-              column. Files must be UTF-8 encoded. Header capitalisation and surrounding whitespace
-              in answers do not affect scoring. Sample identifiers are matched case-insensitively;
-              unordered gene lists may use commas, semicolons or pipes.
-            </p>
+      ) : release && details ? (
+        <div className="flex flex-col gap-7">
+          <div className="rounded-xl border border-[var(--gx-border)] bg-[var(--gx-accent-dim)] p-4">
+            <h3 className="font-semibold text-[var(--gx-text)] mt-0 mb-2">Before you start</h3>
+            <ul className="text-sm text-[var(--gx-text-muted)] pl-5 mb-3 space-y-1">
+              <li>Every release sample must appear exactly once.</li>
+              <li>PASS requires NONE as the failure reason and reveals the analytical fields.</li>
+              <li>FAIL requires a categorical non-NONE reason; unavailable analytical fields are not scored.</li>
+              <li>Fields marked “Supporting evidence — unscored” do not affect the automatic result.</li>
+            </ul>
+            <a className="gx-btn gx-btn-secondary" href={details.sample_sheet.url}>
+              Download CSV template
+            </a>
           </div>
-          <input
-            id={`${exercise}-${mode}-submission`}
-            className="gx-input w-full"
-            type="file"
-            name="file"
-            accept=".csv,.tsv,text/csv,text/tab-separated-values"
-            required
-          />
-          <button className="gx-btn gx-btn-primary self-start" type="submit" disabled={busy}>
-            {busy ? 'Checking submission…' : 'Submit for assessment'}
-          </button>
-        </form>
+
+          <form className="flex flex-col gap-4" onSubmit={submitStructured}>
+            <div>
+              <h3 className="text-lg font-semibold text-[var(--gx-text)] mt-0 mb-1">
+                Complete results online
+              </h3>
+              <p className="text-sm text-[var(--gx-text-muted)] mt-0">
+                Sample identifiers are fixed by this release. Controlled fields use only the
+                choices declared in its submission schema.
+              </p>
+            </div>
+            <div className="overflow-x-auto border border-[var(--gx-border)] rounded-xl">
+              <table className="w-full border-collapse min-w-max">
+                <thead>
+                  <tr>
+                    {fields.map((field) => (
+                      <th
+                        key={field.name}
+                        className="px-3 py-3 border-b border-[var(--gx-border)] text-left align-bottom text-xs text-[var(--gx-text-muted)]"
+                      >
+                        <span className="block font-mono text-[var(--gx-text)]">{field.name}</span>
+                        <span className="block mt-1 font-normal max-w-52">{field.label}</span>
+                        {!field.scored ? (
+                          <span className="block mt-1 font-semibold">Supporting evidence — unscored</span>
+                        ) : field.required || field.required_when ? (
+                          <span className="block mt-1 font-semibold">Required when applicable</span>
+                        ) : (
+                          <span className="block mt-1 font-semibold">Scored</span>
+                        )}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sampleIds.map((sampleId, rowIndex) => {
+                    const values = rows[sampleId] ?? {};
+                    return (
+                      <tr key={sampleId}>
+                        {fields.map((field) => {
+                          const issue = issueMap.get(issueKey(sampleId, field.name));
+                          const active = conditionMatches(field.score_when, values);
+                          const disabledByQc = Boolean(field.score_when) && !active;
+                          return (
+                            <td
+                              key={field.name}
+                              className="px-3 py-3 border-b border-[var(--gx-border)] align-top"
+                            >
+                              {field.identifier ? (
+                                <span className="font-mono text-sm text-[var(--gx-text)]">
+                                  {sampleId}
+                                </span>
+                              ) : disabledByQc ? (
+                                <span className="text-xs text-[var(--gx-text-muted)]">
+                                  Not required for {values.qc_status || 'unselected'} QC
+                                </span>
+                              ) : field.allowed_values?.length ? (
+                                <select
+                                  aria-label={`${field.label} for ${sampleId}`}
+                                  className="gx-input min-w-44"
+                                  value={values[field.name] ?? ''}
+                                  onChange={(event) =>
+                                    updateValue(sampleId, field.name, event.target.value)
+                                  }
+                                >
+                                  <option value="">Select…</option>
+                                  {field.allowed_values.map((value) => (
+                                    <option key={value} value={value}>{value}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  aria-label={`${field.label} for ${sampleId}`}
+                                  className="gx-input min-w-44"
+                                  value={values[field.name] ?? ''}
+                                  onChange={(event) =>
+                                    updateValue(sampleId, field.name, event.target.value)
+                                  }
+                                />
+                              )}
+                              {issue ? (
+                                <span className="block mt-1 max-w-48 text-xs text-red-500" role="alert">
+                                  Row {issue.row ?? rowIndex + 2}: {issue.message}
+                                </span>
+                              ) : null}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <button className="gx-btn gx-btn-primary self-start" type="submit" disabled={busy}>
+              {busy ? 'Checking submission…' : 'Submit online results'}
+            </button>
+          </form>
+
+          <form
+            className="flex flex-col gap-4 border-t border-[var(--gx-border)] pt-6"
+            onSubmit={submitUpload}
+          >
+            <div>
+              <label className="label" htmlFor={`${exercise}-${mode}-submission`}>
+                Or upload a completed CSV or TSV result sheet
+              </label>
+              <p className="text-sm text-[var(--gx-text-muted)] mt-1 mb-0">
+                Use the supplied template and keep every expected sample and column. Files must be
+                UTF-8 encoded. Harmless case and surrounding whitespace are normalised according to
+                the release contract.
+              </p>
+            </div>
+            <input
+              id={`${exercise}-${mode}-submission`}
+              className="gx-input w-full"
+              type="file"
+              name="file"
+              accept=".csv,.tsv,text/csv,text/tab-separated-values"
+              required
+            />
+            <button className="gx-btn gx-btn-secondary self-start" type="submit" disabled={busy}>
+              {busy ? 'Checking submission…' : 'Upload result sheet'}
+            </button>
+          </form>
+
+          {issues.length ? (
+            <div className="rounded-xl border border-red-400/40 p-4" role="alert">
+              <h3 className="font-semibold text-[var(--gx-text)] mt-0 mb-2">
+                Correct these submission issues
+              </h3>
+              <ul className="text-sm text-[var(--gx-text-muted)] pl-5 mb-0 space-y-1">
+                {issues.map((issue, index) => (
+                  <li key={`${issue.row}-${issue.field}-${index}`}>
+                    {issue.row ? `Row ${issue.row}` : 'Result sheet'}
+                    {issue.sampleId ? ` (${issue.sampleId})` : ''}, {issue.field}: {issue.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {mode === 'practice' && feedback?.details ? (
+            <div className="rounded-xl border border-[var(--gx-border)] p-4">
+              <h3 className="font-semibold text-[var(--gx-text)] mt-0 mb-2">
+                Practice feedback
+              </h3>
+              <div className="space-y-3">
+                {sampleIds.map((sampleId) => {
+                  const sampleItems = feedback.details?.items.filter(
+                    (item) => item.sampleId === sampleId,
+                  ) ?? [];
+                  const feedbackItems = sampleItems.filter(
+                    (item) =>
+                      ['qc_status', 'failure_reason'].includes(item.field) || !item.correct,
+                  );
+                  return (
+                    <div key={sampleId}>
+                      <h4 className="font-mono text-sm text-[var(--gx-text)] my-0">{sampleId}</h4>
+                      <ul className="text-sm text-[var(--gx-text-muted)] pl-5 my-1">
+                        {feedbackItems.map((item) => (
+                          <li key={item.field}>
+                            {item.field}: {item.correct ? 'correct' : `check this field (expected ${item.expected || 'blank'})`}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+        </div>
       ) : (
         <p className="text-[var(--gx-text-muted)]">
           {mode === 'challenge'
@@ -133,7 +440,7 @@ export function SubmissionPanel({
             : 'Assessment submissions for this practice exercise are being prepared. The preview and downloads remain available.'}
         </p>
       )}
-      {message ? <p role="status" className="text-[var(--gx-text-muted)]">{message}</p> : null}
+      {message ? <p role="status" className="text-[var(--gx-text-muted)] mt-4">{message}</p> : null}
     </section>
   );
 }

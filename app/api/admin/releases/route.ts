@@ -1,5 +1,11 @@
 import { getEnv } from '@/lib/cloudflare';
 import { jsonError, requireRole, requireUser } from '@/lib/assessment';
+import {
+  assertMatchingReleaseContracts,
+  type AnswerKeyContractMetadata,
+  type ScoringPolicy,
+  type SubmissionSchema,
+} from '@/lib/release-contract';
 
 const EXERCISES = new Set(['typing', 'assembly', 'hybrid', 'outbreak']);
 
@@ -24,22 +30,30 @@ export async function POST(request: Request): Promise<Response> {
     ) {
       return Response.json({ error: 'Release fields are invalid' }, { status: 400 });
     }
-    const prefix = `releases/${body.releaseId}/${body.exercise}/${body.mode}`;
-    const bucket = body.mode === 'practice' ? env.PRACTICE_ASSETS : env.PRIVATE_ASSETS;
-    const [manifestObject, indexObject, completeObject, sampleSheet, submissionSchema] =
+    const releaseId = body.releaseId;
+    const exercise = body.exercise as 'typing' | 'assembly' | 'hybrid' | 'outbreak';
+    const mode = body.mode as 'practice' | 'challenge';
+    const prefix = `releases/${releaseId}/${exercise}/${mode}`;
+    const bucket = mode === 'practice' ? env.PRACTICE_ASSETS : env.PRIVATE_ASSETS;
+    const [manifestObject, indexObject, completeObject, sampleSheet, submissionObject,
+      answerObject, policyObject] =
       await Promise.all([
         bucket.get(`${prefix}/dataset_manifest.json`),
         bucket.get(`${prefix}/release.json`),
         bucket.get(`${prefix}/COMPLETE.json`),
         bucket.head(`${prefix}/sample_sheet.csv`),
-        bucket.head(`${prefix}/submission_schema.json`),
+        bucket.get(`${prefix}/submission_schema.json`),
+        env.PRIVATE_ASSETS.get(`${prefix}/private/answer_key.json`),
+        env.PRIVATE_ASSETS.get(`${prefix}/private/scoring_policy.json`),
       ]);
     if (
       !manifestObject ||
       !indexObject ||
       !completeObject ||
       !sampleSheet ||
-      !submissionSchema
+      !submissionObject ||
+      !answerObject ||
+      !policyObject
     ) {
       return Response.json(
         { error: 'The uploaded release contract is incomplete' },
@@ -49,28 +63,49 @@ export async function POST(request: Request): Promise<Response> {
     const manifest = (await manifestObject.json()) as Record<string, unknown>;
     const index = (await indexObject.json()) as Record<string, unknown>;
     const complete = (await completeObject.json()) as Record<string, unknown>;
-    if (
-      manifest.schema_version !== '2.0' ||
-      index.schema_version !== '2.0' ||
-      complete.status !== 'complete' ||
-      manifest.release_id !== body.releaseId ||
-      manifest.exercise !== body.exercise ||
-      manifest.mode !== body.mode ||
-      index.release_id !== body.releaseId ||
-      complete.release_id !== body.releaseId
-    ) {
+    const submissionSchema = (await submissionObject.json()) as SubmissionSchema;
+    const answerKey = (await answerObject.json()) as AnswerKeyContractMetadata;
+    const scoringPolicy = (await policyObject.json()) as ScoringPolicy;
+    let schemaVersion: string;
+    try {
+      schemaVersion = assertMatchingReleaseContracts({
+        releaseId,
+        exercise,
+        mode,
+        requestedSchemaVersion: body.schemaVersion,
+        manifest,
+        releaseIndex: index,
+        complete,
+        submissionSchema,
+        answerKey,
+        scoringPolicy,
+      });
+    } catch (error) {
       return Response.json(
-        { error: 'Uploaded release metadata does not match the registration request' },
+        { error: error instanceof Error ? error.message : 'Release contract is invalid' },
         { status: 400 },
       );
     }
-    const id = crypto.randomUUID();
+    const existing = await env.DB.prepare(
+      `SELECT id, schema_version
+         FROM dataset_release
+        WHERE release_id = ? AND exercise = ? AND mode = ?`,
+    )
+      .bind(body.releaseId, body.exercise, body.mode)
+      .first<{ id: string; schema_version: string }>();
+    const id = existing?.id ?? crypto.randomUUID();
     await env.DB.batch([
       env.DB.prepare(
         `INSERT INTO dataset_release
            (id, release_id, exercise, mode, manifest_key, answer_key, round_id,
             schema_version, published_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+         ON CONFLICT(release_id, exercise, mode) DO UPDATE SET
+           manifest_key = excluded.manifest_key,
+           answer_key = excluded.answer_key,
+           round_id = excluded.round_id,
+           schema_version = excluded.schema_version,
+           published_at = CURRENT_TIMESTAMP`,
       ).bind(
         id,
         body.releaseId,
@@ -79,13 +114,23 @@ export async function POST(request: Request): Promise<Response> {
         `${prefix}/dataset_manifest.json`,
         `${prefix}/private/answer_key.json`,
         body.roundId ?? null,
-        String(manifest.schema_version),
+        schemaVersion,
       ),
       env.DB.prepare(
         `INSERT INTO audit_event
            (id, actor_user_id, action, target_type, target_id, after_json)
          VALUES (?, ?, 'release.registered', 'dataset_release', ?, ?)`,
-      ).bind(crypto.randomUUID(), actor.id, id, JSON.stringify(body)),
+      ).bind(
+        crypto.randomUUID(),
+        actor.id,
+        id,
+        JSON.stringify({
+          ...body,
+          prefix,
+          schemaVersion,
+          replacedSchemaVersion: existing?.schema_version ?? null,
+        }),
+      ),
     ]);
     return Response.json(
       {
@@ -94,9 +139,9 @@ export async function POST(request: Request): Promise<Response> {
         releaseId: manifest.release_id,
         exercise: manifest.exercise,
         mode: manifest.mode,
-        schemaVersion: manifest.schema_version,
+        schemaVersion,
       },
-      { status: 201 },
+      { status: existing ? 200 : 201 },
     );
   } catch (error) {
     return jsonError(error);

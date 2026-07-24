@@ -9,6 +9,7 @@ import {
   type ScoringPolicy,
   validateSubmissionCompleteness,
 } from '@/lib/scoring';
+import type { SubmissionSchema } from '@/lib/release-contract';
 
 const MAX_SUBMISSION_BYTES = 10 * 1024 * 1024;
 
@@ -54,27 +55,38 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
     const format = detectDelimiter(submissionText) === '\t' ? 'tsv' : 'csv';
-    const answerObject = await env.PRIVATE_ASSETS.get(release.answerKey);
-    if (!answerObject) {
-      throw new Error(`Private answer key is missing for release ${release.id}`);
+    const policyKey = release.answerKey.replace(/answer_key\.json$/, 'scoring_policy.json');
+    const prefix = release.manifestKey.slice(0, release.manifestKey.lastIndexOf('/'));
+    const participantBucket =
+      release.mode === 'practice' ? env.PRACTICE_ASSETS : env.PRIVATE_ASSETS;
+    const [answerObject, policyObject, schemaObject] = await Promise.all([
+      env.PRIVATE_ASSETS.get(release.answerKey),
+      env.PRIVATE_ASSETS.get(policyKey),
+      participantBucket.get(`${prefix}/submission_schema.json`),
+    ]);
+    if (!answerObject || !policyObject || !schemaObject) {
+      throw new Error(`Release scoring contract is incomplete for ${release.id}`);
     }
     const answerKey = (await answerObject.json()) as AnswerKey;
-    const policyKey = release.answerKey.replace(/answer_key\.json$/, 'scoring_policy.json');
-    const policyObject = await env.PRIVATE_ASSETS.get(policyKey);
-    const policy = policyObject
-      ? ((await policyObject.json()) as ScoringPolicy)
-      : undefined;
+    const policy = (await policyObject.json()) as ScoringPolicy;
+    const schema = (await schemaObject.json()) as SubmissionSchema;
     if (
       answerKey.release_id !== release.releaseId
       || answerKey.exercise !== release.exercise
       || answerKey.mode !== release.mode
+      || answerKey.schema_version !== release.schemaVersion
     ) {
       throw new Error(`Private answer key does not match release ${release.id}`);
     }
-    if (policy && policy.release_id !== release.releaseId) {
-      throw new Error(`Scoring policy does not match release ${release.id}`);
+    if (
+      policy.release_id !== release.releaseId
+      || policy.schema_version !== release.schemaVersion
+      || schema.release_id !== release.releaseId
+      || schema.schema_version !== release.schemaVersion
+    ) {
+      throw new Error(`Release scoring contracts do not match ${release.id}`);
     }
-    const score = scoreSubmission(submissionText, answerKey, policy);
+    const score = scoreSubmission(submissionText, answerKey, policy, schema);
     validateSubmissionCompleteness(score, policy);
     const submissionId = crypto.randomUUID();
     const scoreId = crypto.randomUUID();
@@ -88,6 +100,9 @@ export async function POST(request: Request): Promise<Response> {
     )
       .bind(release.id, user.id)
       .first<{ next_attempt: number }>();
+    const attemptNumber = Number(attempt?.next_attempt ?? 1);
+    const submittedAt = new Date().toISOString();
+    const provisional = release.mode === 'challenge' ? 1 : 0;
     await env.PRIVATE_ASSETS.put(objectKey, bytes, {
       httpMetadata: {
         contentType:
@@ -101,30 +116,32 @@ export async function POST(request: Request): Promise<Response> {
       await env.DB.batch([
         env.DB.prepare(
           `INSERT INTO submission
-             (id, release_id, user_id, attempt_number, object_key, original_filename,
-              sha256, size_bytes, status)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'scored')`,
+              (id, release_id, user_id, attempt_number, object_key, original_filename,
+              sha256, size_bytes, submitted_at, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'scored')`,
         ).bind(
           submissionId,
           release.id,
           user.id,
-          Number(attempt?.next_attempt ?? 1),
+          attemptNumber,
           objectKey,
           filename,
           digest,
           upload.size,
+          submittedAt,
         ),
         env.DB.prepare(
           `INSERT INTO score
              (id, submission_id, scorer_version, earned, possible, passed, provisional, details_json)
-           VALUES (?, ?, ?, ?, ?, ?, 1, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         ).bind(
           scoreId,
           submissionId,
-          policy?.scorer_version ?? 'exact-v1',
+          policy.scorer_version,
           score.earned,
           score.possible,
           score.passed ? 1 : 0,
+          provisional,
           JSON.stringify(score),
         ),
         env.DB.prepare(
@@ -134,17 +151,35 @@ export async function POST(request: Request): Promise<Response> {
           crypto.randomUUID(),
           user.id,
           submissionId,
-          JSON.stringify({ earned: score.earned, possible: score.possible, passed: score.passed }),
+          JSON.stringify({
+            attemptNumber,
+            submittedAt,
+            earned: score.earned,
+            possible: score.possible,
+            passed: score.passed,
+            provisional: Boolean(provisional),
+          }),
         ),
       ]);
     } catch (error) {
       await env.PRIVATE_ASSETS.delete(objectKey);
       throw error;
     }
-    return Response.json(buildSubmissionReceipt(release.mode, submissionId, score));
+    return Response.json(
+      buildSubmissionReceipt(
+        release.mode,
+        submissionId,
+        attemptNumber,
+        submittedAt,
+        score,
+      ),
+    );
   } catch (error) {
     if (error instanceof SubmissionValidationError) {
-      return Response.json({ error: error.message }, { status: 400 });
+      return Response.json(
+        { error: error.message, issues: error.issues },
+        { status: 400 },
+      );
     }
     return jsonError(error);
   }

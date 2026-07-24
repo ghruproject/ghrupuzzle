@@ -26,17 +26,17 @@ export interface ReferenceGenome {
 
 export interface ShortReadSample {
   public_name: string;
-  R1_URL: string;
-  R2_URL: string;
+  R1_URL?: string;
+  R2_URL?: string;
 }
 
 export interface TypingSample {
   public_name: string;
-  FASTA_URL: string;
+  FASTA_URL?: string;
 }
 
 export interface HybridAssemblySample extends ShortReadSample {
-  LONG_READ_URL: string;
+  LONG_READ_URL?: string;
   reference_accession?: string;
 }
 
@@ -52,13 +52,7 @@ export interface ExerciseDataset<TSample> {
     title: string;
     description: string;
     instructions: string[];
-    fields: Array<{
-      name: string;
-      label: string;
-      description: string;
-      required: boolean;
-      scored: boolean;
-    }>;
+    fields: Array<SubmissionField & { score_when?: ContractCondition | null }>;
   };
   access?: {
     releaseDatabaseId: string;
@@ -96,3 +90,4 @@ export interface ExerciseDefinition<TSample> {
   emptyStateTitle: string;
   emptyStateBody: string;
 }
+import type { ContractCondition, SubmissionField } from './release-contract';

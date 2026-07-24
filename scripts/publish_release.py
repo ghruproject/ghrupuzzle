@@ -20,7 +20,7 @@ except ModuleNotFoundError:  # Validation and dry runs do not require upload dep
     load_dotenv = None
 
 
-SCHEMA_VERSION = "2.0"
+SUPPORTED_SCHEMA_VERSIONS = {"2.0", "2.1"}
 EXERCISES = {"typing", "assembly", "hybrid", "outbreak"}
 MODES = {"practice", "challenge"}
 FORBIDDEN_KEYS = {
@@ -97,10 +97,13 @@ def load_and_validate_release(release_dir):
         raise ValueError("public dataset manifest must be a JSON object")
     _assert_no_private_keys(manifest)
 
-    if str(manifest.get("schema_version")) != SCHEMA_VERSION:
+    schema_version = str(manifest.get("schema_version"))
+    if schema_version not in SUPPORTED_SCHEMA_VERSIONS:
         raise ValueError("unsupported public manifest schema version")
-    if release_index.get("schema_version") != SCHEMA_VERSION:
+    if release_index.get("schema_version") != schema_version:
         raise ValueError("unsupported release index schema version")
+    if complete.get("schema_version") != schema_version:
+        raise ValueError("completion marker schema version differs from manifest")
     if complete.get("status") != "complete":
         raise ValueError("release is not complete")
     if complete.get("bundle_sha256") != bundle_sha256(release_path):

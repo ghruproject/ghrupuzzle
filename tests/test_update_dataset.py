@@ -97,7 +97,7 @@ class ManifestPublisherTests(unittest.TestCase):
         fasta.write_text(">contig\nACGT\n", encoding="utf-8")
         digest = hashlib.sha256(fasta.read_bytes()).hexdigest()
         manifest = {
-            "schema_version": "2.0",
+            "schema_version": "2.1",
             "release_id": "2026-round-1-typing-practice",
             "exercise": "typing",
             "mode": "practice",
@@ -122,7 +122,7 @@ class ManifestPublisherTests(unittest.TestCase):
         )
         for name, content in (
             ("sample_sheet.csv", "sample_id,st\nSample_abc123,\n"),
-            ("submission_schema.json", '{"schema_version":"2.0"}'),
+            ("submission_schema.json", '{"schema_version":"2.1"}'),
             ("instructions.md", "# Fixture\n"),
             ("checksums.sha256", "{}  public/files/{}\n".format(digest, fasta.name)),
         ):
@@ -141,7 +141,7 @@ class ManifestPublisherTests(unittest.TestCase):
         (release / "release.json").write_text(
             json.dumps(
                 {
-                    "schema_version": "2.0",
+                    "schema_version": "2.1",
                     "release_id": release_id,
                     "exercise": "typing",
                     "mode": "practice",
@@ -152,7 +152,7 @@ class ManifestPublisherTests(unittest.TestCase):
         (release / "COMPLETE.json").write_text(
             json.dumps(
                 {
-                    "schema_version": "2.0",
+                    "schema_version": "2.1",
                     "release_id": release_id,
                     "status": "complete",
                     "bundle_sha256": bundle_sha256(release),
