@@ -1,39 +1,84 @@
 {
-    "samples": [
-        {
-            "public_name": "Sample_178db692semb",
-            "R1_URL": "https://pub-e661bf7ded744bd79c156d3a4f4323ef.r2.dev/Sample_178db692semb_R1.fastq.gz",
-            "R2_URL": "https://pub-e661bf7ded744bd79c156d3a4f4323ef.r2.dev/Sample_178db692semb_R2.fastq.gz"
-        },
-        {
-            "public_name": "Sample_e236b6bdsemb",
-            "R1_URL": "https://pub-e661bf7ded744bd79c156d3a4f4323ef.r2.dev/Sample_e236b6bdsemb_R1.fastq.gz",
-            "R2_URL": "https://pub-e661bf7ded744bd79c156d3a4f4323ef.r2.dev/Sample_e236b6bdsemb_R2.fastq.gz"
-        },
-        {
-            "public_name": "Sample_1cc0da37semb",
-            "R1_URL": "https://pub-e661bf7ded744bd79c156d3a4f4323ef.r2.dev/Sample_1cc0da37semb_R1.fastq.gz",
-            "R2_URL": "https://pub-e661bf7ded744bd79c156d3a4f4323ef.r2.dev/Sample_1cc0da37semb_R2.fastq.gz"
-        },
-        {
-            "public_name": "Sample_eb789dafsemb",
-            "R1_URL": "https://pub-e661bf7ded744bd79c156d3a4f4323ef.r2.dev/Sample_eb789dafsemb_R1.fastq.gz",
-            "R2_URL": "https://pub-e661bf7ded744bd79c156d3a4f4323ef.r2.dev/Sample_eb789dafsemb_R2.fastq.gz"
-        },
-        {
-            "public_name": "Sample_6d8e0e28ntam",
-            "R1_URL": "https://pub-e661bf7ded744bd79c156d3a4f4323ef.r2.dev/Sample_6d8e0e28ntam_R1.fastq.gz",
-            "R2_URL": "https://pub-e661bf7ded744bd79c156d3a4f4323ef.r2.dev/Sample_6d8e0e28ntam_R2.fastq.gz"
-        }
+  "samples": [
+    {
+      "public_name": "Sample_AP001",
+      "R1_URL": "https://pub-0095c1ea3d4849fd954f675d08b9dcd6.r2.dev/releases/2026-website-assembly-practice/assembly/practice/files/Sample_AP001_R1.fastq.gz",
+      "R2_URL": "https://pub-0095c1ea3d4849fd954f675d08b9dcd6.r2.dev/releases/2026-website-assembly-practice/assembly/practice/files/Sample_AP001_R2.fastq.gz"
+    },
+    {
+      "public_name": "Sample_AP002",
+      "R1_URL": "https://pub-0095c1ea3d4849fd954f675d08b9dcd6.r2.dev/releases/2026-website-assembly-practice/assembly/practice/files/Sample_AP002_R1.fastq.gz",
+      "R2_URL": "https://pub-0095c1ea3d4849fd954f675d08b9dcd6.r2.dev/releases/2026-website-assembly-practice/assembly/practice/files/Sample_AP002_R2.fastq.gz"
+    },
+    {
+      "public_name": "Sample_AP003",
+      "R1_URL": "https://pub-0095c1ea3d4849fd954f675d08b9dcd6.r2.dev/releases/2026-website-assembly-practice/assembly/practice/files/Sample_AP003_R1.fastq.gz",
+      "R2_URL": "https://pub-0095c1ea3d4849fd954f675d08b9dcd6.r2.dev/releases/2026-website-assembly-practice/assembly/practice/files/Sample_AP003_R2.fastq.gz"
+    },
+    {
+      "public_name": "Sample_AP004",
+      "R1_URL": "https://pub-0095c1ea3d4849fd954f675d08b9dcd6.r2.dev/releases/2026-website-assembly-practice/assembly/practice/files/Sample_AP004_R1.fastq.gz",
+      "R2_URL": "https://pub-0095c1ea3d4849fd954f675d08b9dcd6.r2.dev/releases/2026-website-assembly-practice/assembly/practice/files/Sample_AP004_R2.fastq.gz"
+    }
+  ],
+  "answer_sheet": {
+    "species": []
+  },
+  "sample_sheet": {
+    "filename": "sample_sheet.csv",
+    "url": "https://pub-0095c1ea3d4849fd954f675d08b9dcd6.r2.dev/releases/2026-website-assembly-practice/assembly/practice/sample_sheet.csv"
+  },
+  "supporting_files": [
+    {
+      "label": "Checksums",
+      "url": "https://pub-0095c1ea3d4849fd954f675d08b9dcd6.r2.dev/releases/2026-website-assembly-practice/assembly/practice/checksums.sha256"
+    }
+  ],
+  "release_date": "2026-07-23T21:57:45Z",
+  "releaseDefinition": {
+    "title": "Short-read assembly practice",
+    "description": "Practise assembly, taxonomic identification and read/assembly QC.",
+    "instructions": [
+      "Assemble every paired-read dataset with a reproducible workflow.",
+      "Report the final taxonomic call and QC decision.",
+      "Use notes only for concise supporting interpretation."
     ],
-    "answer_sheet": {
-        "species": [
-            "K. pneumoniae"
-        ]
-    },
-    "sample_sheet": {
-        "filename": "practice_assembly_sample_sheet_858efa66af.csv",
-        "url": "https://pub-e661bf7ded744bd79c156d3a4f4323ef.r2.dev/practice_assembly_sample_sheet_858efa66af.csv"
-    },
-    "release_date": "2025-04-16 13:53:34"
+    "fields": [
+      {
+        "name": "sample_id",
+        "label": "Sample",
+        "description": "Public sample identifier.",
+        "required": true,
+        "scored": false
+      },
+      {
+        "name": "species",
+        "label": "Species",
+        "description": "Final taxonomic call.",
+        "required": true,
+        "scored": true
+      },
+      {
+        "name": "qc",
+        "label": "QC",
+        "description": "PASS or FAIL.",
+        "required": true,
+        "scored": true
+      },
+      {
+        "name": "error",
+        "label": "Problem",
+        "description": "Detected problem type.",
+        "required": false,
+        "scored": true
+      },
+      {
+        "name": "notes",
+        "label": "Notes",
+        "description": "Concise interpretation.",
+        "required": false,
+        "scored": false
+      }
+    ]
+  }
 }
