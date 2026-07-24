@@ -2,6 +2,7 @@ import unittest
 import hashlib
 import json
 import logging
+import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -11,6 +12,7 @@ from scripts.publish_release import (
     build_private_upload_plan,
     build_upload_plan,
     load_and_validate_release,
+    _load_upload_environment,
     main as publish_main,
 )
 from scripts.update_dataset import (
@@ -54,6 +56,26 @@ class LegacyPublisherSafetyTests(unittest.TestCase):
 
 
 class ManifestPublisherTests(unittest.TestCase):
+    def test_upload_environment_overrides_previous_bucket_credentials(self):
+        values = {
+            "BUCKET_NAME": "private-bucket",
+            "ACCESS_KEY_ID": "private-access",
+            "SECRET_ACCESS_KEY": "private-secret",
+            "ENDPOINT_URL": "https://account.r2.cloudflarestorage.com",
+        }
+        with patch("scripts.publish_release.boto3", object()):
+            with patch("scripts.publish_release.Config", object()):
+                with patch(
+                    "scripts.publish_release.load_dotenv", return_value=True
+                ) as loader:
+                    with patch.dict(os.environ, values, clear=True):
+                        config = _load_upload_environment(
+                            ".private-r2.env", require_public_url=False
+                        )
+
+        loader.assert_called_once_with(".private-r2.env", override=True)
+        self.assertEqual(config["bucket"], "private-bucket")
+
     def test_cli_enables_visible_info_logging(self):
         with patch("scripts.publish_release.logging.basicConfig") as configure:
             with patch(

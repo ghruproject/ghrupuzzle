@@ -345,7 +345,10 @@ def build_private_upload_plan(validated):
 def _load_upload_environment(dotenv_path, require_public_url=True):
     if boto3 is None or Config is None or load_dotenv is None:
         raise RuntimeError("Publishing requires boto3 and python-dotenv")
-    if not load_dotenv(dotenv_path):
+    # Publishing deliberately switches between public and private credentials
+    # in one process. Override values loaded for the previous bucket so private
+    # artifacts cannot inherit the public bucket configuration.
+    if not load_dotenv(dotenv_path, override=True):
         raise ValueError("Could not load environment file: {0}".format(dotenv_path))
     values = {
         "bucket": os.getenv("BUCKET_NAME"),
