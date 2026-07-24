@@ -13,8 +13,8 @@ export default function Home() {
         </h1>
         <p className="text-lg text-[var(--gx-text-muted)] max-w-3xl mb-0">
           Work through short-read assembly, hybrid assembly, genotyping and outbreak analysis.
-          Evaluate your workflow, interpret quality evidence and produce reproducible results in
-          standard formats.
+          Test your bioinformatics pipelines, assess your team’s proficiency and identify areas for
+          improvement using realistic, reproducible tasks.
         </p>
       </section>
 
