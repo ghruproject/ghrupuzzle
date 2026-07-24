@@ -8,7 +8,7 @@ export async function POST(
   try {
     const env = await getEnv();
     const actor = await requireUser(request);
-    await requireRole(env.DB, actor.id, ['administrator']);
+    await requireRole(env.DB, actor, ['administrator']);
     const { id } = await context.params;
     const round = await env.DB.prepare('SELECT closes_at FROM assessment_round WHERE id = ?')
       .bind(id)

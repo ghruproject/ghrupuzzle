@@ -28,6 +28,8 @@ type Dialog =
   | { type: 'finalize'; round: AdminRound }
   | { type: 'certificate'; candidate: AdminCertificateCandidate }
   | { type: 'revoke'; certificate: AdminCertificate }
+  | { type: 'add-administrator' }
+  | { type: 'remove-administrator'; email: string }
   | null;
 
 const DATE_FORMAT = new Intl.DateTimeFormat('en-GB', {
@@ -204,12 +206,16 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
     );
   }, [overview?.participants, participantSearch]);
 
-  async function mutate(url: string, body?: unknown): Promise<Record<string, unknown>> {
+  async function mutate(
+    url: string,
+    body?: unknown,
+    method = 'POST',
+  ): Promise<Record<string, unknown>> {
     setBusy(true);
     setMessage('');
     try {
       const response = await fetch(url, {
-        method: 'POST',
+        method,
         headers: body === undefined ? undefined : { 'content-type': 'application/json' },
         body: body === undefined ? undefined : JSON.stringify(body),
       });
@@ -312,6 +318,40 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
       setMessage(`Certificate ${certificate.public_code} revoked.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Certificate could not be revoked.');
+    }
+  }
+
+  async function addAdministrator(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    try {
+      const result = await mutate('/api/admin/administrators', {
+        email: data.get('email'),
+      });
+      setMessage(`${String(result.email)} can now access administration.`);
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Administrator access could not be added.',
+      );
+    }
+  }
+
+  async function removeAdministrator(
+    event: FormEvent<HTMLFormElement>,
+    email: string,
+  ) {
+    event.preventDefault();
+    try {
+      await mutate('/api/admin/administrators', { email }, 'DELETE');
+      setMessage(`${email} no longer has administrator access.`);
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Administrator access could not be removed.',
+      );
     }
   }
 
@@ -494,7 +534,11 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
                         <strong className="text-[var(--gx-text)]">{participant.name || 'Unnamed participant'}</strong>
                         <span className="block text-xs text-[var(--gx-text-muted)]">{participant.email}</span>
                       </td>
-                      <td className="border-b border-[var(--gx-border)] px-4 py-3">{participant.roles?.split(',').join(', ') || 'participant'}</td>
+                      <td className="border-b border-[var(--gx-border)] px-4 py-3">
+                        {count(participant.is_administrator)
+                          ? 'administrator'
+                          : participant.roles?.split(',').join(', ') || 'participant'}
+                      </td>
                       <td className="border-b border-[var(--gx-border)] px-4 py-3">{count(participant.active_enrolments)}</td>
                       <td className="border-b border-[var(--gx-border)] px-4 py-3">{count(participant.submissions)}</td>
                       <td className="border-b border-[var(--gx-border)] px-4 py-3">{formatDate(participant.last_submission_at)}</td>
@@ -508,6 +552,40 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
         </div>
 
         <aside className="min-w-0 space-y-6">
+          <section className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-surface)] p-6 shadow-sm" aria-labelledby="administrator-access-title">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 id="administrator-access-title" className="m-0 text-xl font-bold text-[var(--gx-text)]">Administrator access</h2>
+                <p className="mb-0 mt-1 text-sm text-[var(--gx-text-muted)]">Only these email addresses can open this dashboard or use administrator APIs.</p>
+              </div>
+              <button className="gx-btn gx-btn-secondary shrink-0" type="button" onClick={() => setDialog({ type: 'add-administrator' })}>Add</button>
+            </div>
+            <div className="mt-4 space-y-3">
+              {overview?.administrators.map((administrator) => {
+                const finalAdministrator = overview.administrators.length === 1;
+                return (
+                  <article className="flex items-center justify-between gap-3 rounded-xl border border-[var(--gx-border)] bg-[var(--gx-bg-alt)] p-3" key={administrator.email}>
+                    <div className="min-w-0">
+                      <strong className="block truncate text-sm text-[var(--gx-text)]">{administrator.email}</strong>
+                      <span className="block text-xs text-[var(--gx-text-muted)]">
+                        Added {formatDate(administrator.created_at)}
+                      </span>
+                    </div>
+                    <button
+                      className="shrink-0 text-xs font-bold text-red-700 hover:underline disabled:cursor-not-allowed disabled:text-[var(--gx-text-muted)] disabled:no-underline dark:text-red-300"
+                      type="button"
+                      disabled={finalAdministrator}
+                      title={finalAdministrator ? 'Add another administrator before removing this address' : undefined}
+                      onClick={() => setDialog({ type: 'remove-administrator', email: administrator.email })}
+                    >
+                      Remove
+                    </button>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+
           <section className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-surface)] p-6 shadow-sm">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -646,6 +724,28 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
               <Field label="Reason for revocation"><textarea className="gx-input mt-2 min-h-28 w-full resize-y" name="reason" required maxLength={1000} /></Field>
             </div>
             <DialogActions danger busy={busy} submitLabel="Revoke certificate" busyLabel="Revoking…" onCancel={() => setDialog(null)} />
+          </form>
+        </Modal>
+      ) : null}
+
+      {dialog?.type === 'add-administrator' ? (
+        <Modal eyebrow="Access control" title="Add administrator" description="This address will gain administrator access as soon as it signs in, even if no account exists yet." busy={busy} onClose={() => setDialog(null)}>
+          <form onSubmit={addAdministrator}>
+            <div className="px-6 py-5">
+              <Field label="Email address"><input className="gx-input mt-2 w-full" name="email" type="email" autoComplete="email" placeholder="name@example.org" required autoFocus /></Field>
+            </div>
+            <DialogActions busy={busy} submitLabel="Add administrator" busyLabel="Adding…" onCancel={() => setDialog(null)} />
+          </form>
+        </Modal>
+      ) : null}
+
+      {dialog?.type === 'remove-administrator' ? (
+        <Modal eyebrow="Access control" title="Remove administrator" description="This address will immediately lose access to the administration dashboard and administrator APIs." busy={busy} onClose={() => setDialog(null)}>
+          <form onSubmit={(event) => removeAdministrator(event, dialog.email)}>
+            <div className="px-6 py-5 text-sm text-[var(--gx-text)]">
+              Remove administrator access for <strong>{dialog.email}</strong>?
+            </div>
+            <DialogActions danger busy={busy} submitLabel="Remove administrator" busyLabel="Removing…" onCancel={() => setDialog(null)} />
           </form>
         </Modal>
       ) : null}

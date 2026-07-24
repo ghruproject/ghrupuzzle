@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { AdminDashboard } from '@/components/admin-dashboard';
 import { createAuth } from '@/lib/auth';
 import { getEnv } from '@/lib/cloudflare';
+import { hasAdministratorAccess } from '@/lib/assessment';
 import { privatePageMetadata } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
@@ -15,12 +16,9 @@ export default async function AdminPage() {
   if (!session) redirect('/sign-in?returnTo=%2Fadmin');
 
   const env = await getEnv();
-  const role = await env.DB.prepare(
-    "SELECT role FROM user_role WHERE user_id = ? AND role = 'administrator'",
-  )
-    .bind(session.user.id)
-    .first();
-  if (!role) redirect('/dashboard');
+  if (!(await hasAdministratorAccess(env.DB, session.user.email))) {
+    redirect('/dashboard');
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">

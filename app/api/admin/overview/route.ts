@@ -9,13 +9,14 @@ import type {
   AdminRelease,
   AdminRound,
   AdminStats,
+  AdministratorEmail,
 } from '@/lib/admin';
 
 export async function GET(request: Request): Promise<Response> {
   try {
     const env = await getEnv();
     const actor = await requireUser(request);
-    await requireRole(env.DB, actor.id, ['administrator']);
+    await requireRole(env.DB, actor, ['administrator']);
 
     const [
       stats,
@@ -25,6 +26,7 @@ export async function GET(request: Request): Promise<Response> {
       certificateCandidates,
       certificates,
       auditEvents,
+      administrators,
     ] = await Promise.all([
       env.DB.prepare(
         `SELECT
@@ -69,12 +71,16 @@ export async function GET(request: Request): Promise<Response> {
       ).all<AdminRelease>(),
       env.DB.prepare(
         `SELECT u.id, u.name, u.email, u.createdAt AS created_at,
-                GROUP_CONCAT(DISTINCT ur.role) AS roles,
+                GROUP_CONCAT(DISTINCT CASE
+                  WHEN ur.role != 'administrator' THEN ur.role
+                END) AS roles,
+                MAX(CASE WHEN ae.email IS NOT NULL THEN 1 ELSE 0 END) AS is_administrator,
                 COUNT(DISTINCT CASE WHEN e.status = 'active' THEN e.round_id END) AS active_enrolments,
                 COUNT(DISTINCT s.id) AS submissions,
                 MAX(s.submitted_at) AS last_submission_at
            FROM user u
            LEFT JOIN user_role ur ON ur.user_id = u.id
+           LEFT JOIN administrator_email ae ON ae.email = u.email COLLATE NOCASE
            LEFT JOIN enrolment e ON e.user_id = u.id
            LEFT JOIN submission s ON s.user_id = u.id
           GROUP BY u.id
@@ -123,6 +129,13 @@ export async function GET(request: Request): Promise<Response> {
           ORDER BY a.created_at DESC
           LIMIT 50`,
       ).all<AdminAuditEvent>(),
+      env.DB.prepare(
+        `SELECT ae.email, ae.created_at, u.name AS added_by_name,
+                u.email AS added_by_email
+           FROM administrator_email ae
+           LEFT JOIN user u ON u.id = ae.added_by
+          ORDER BY ae.created_at, ae.email`,
+      ).all<AdministratorEmail>(),
     ]);
 
     const statsRow = stats ?? {};
@@ -141,6 +154,7 @@ export async function GET(request: Request): Promise<Response> {
       certificateCandidates: certificateCandidates.results,
       certificates: certificates.results,
       auditEvents: auditEvents.results,
+      administrators: administrators.results,
     };
     return Response.json(overview);
   } catch (error) {

@@ -37,17 +37,38 @@ export async function requireUser(request: Request): Promise<AuthenticatedUser> 
 
 export async function requireRole(
   db: D1Database,
-  userId: string,
+  user: AuthenticatedUser,
   roles: Array<'reviewer' | 'administrator'>,
 ): Promise<void> {
-  const placeholders = roles.map(() => '?').join(',');
-  const row = await db
-    .prepare(`SELECT role FROM user_role WHERE user_id = ? AND role IN (${placeholders}) LIMIT 1`)
-    .bind(userId, ...roles)
-    .first();
-  if (!row) {
-    throw new Response('Insufficient permission', { status: 403 });
+  if (
+    roles.includes('administrator') &&
+    (await hasAdministratorAccess(db, user.email))
+  ) {
+    return;
   }
+  const remainingRoles = roles.filter((role) => role !== 'administrator');
+  if (remainingRoles.length) {
+    const placeholders = remainingRoles.map(() => '?').join(',');
+    const row = await db
+      .prepare(`SELECT role FROM user_role WHERE user_id = ? AND role IN (${placeholders}) LIMIT 1`)
+      .bind(user.id, ...remainingRoles)
+      .first();
+    if (row) return;
+  }
+  throw new Response('Insufficient permission', { status: 403 });
+}
+
+export async function hasAdministratorAccess(
+  db: D1Database,
+  email: string,
+): Promise<boolean> {
+  const row = await db
+    .prepare(
+      'SELECT email FROM administrator_email WHERE email = ? COLLATE NOCASE LIMIT 1',
+    )
+    .bind(email.trim().toLowerCase())
+    .first();
+  return Boolean(row);
 }
 
 export async function requireReleaseAccess(

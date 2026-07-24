@@ -13,7 +13,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const env = await getEnv();
     const actor = await requireUser(request);
-    await requireRole(env.DB, actor.id, ['administrator']);
+    await requireRole(env.DB, actor, ['administrator']);
     const body = (await request.json()) as {
       releaseId?: string;
       exercise?: string;

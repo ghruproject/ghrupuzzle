@@ -48,3 +48,10 @@ export function parseInvitationList(
   }
   return invitations;
 }
+
+export function normaliseAdministratorEmail(value: string): string | null {
+  const email = value.trim().toLowerCase();
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) && email.length <= 254
+    ? email
+    : null;
+}

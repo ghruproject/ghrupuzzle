@@ -44,6 +44,7 @@ export interface AdminParticipant {
   email: string;
   created_at: number;
   roles: string | null;
+  is_administrator: number;
   active_enrolments: number;
   submissions: number;
   last_submission_at: string | null;
@@ -83,6 +84,13 @@ export interface AdminAuditEvent {
   actor_email: string | null;
 }
 
+export interface AdministratorEmail {
+  email: string;
+  created_at: string;
+  added_by_name: string | null;
+  added_by_email: string | null;
+}
+
 export interface AdminOverview {
   stats: AdminStats;
   rounds: AdminRound[];
@@ -91,4 +99,5 @@ export interface AdminOverview {
   certificateCandidates: AdminCertificateCandidate[];
   certificates: AdminCertificate[];
   auditEvents: AdminAuditEvent[];
+  administrators: AdministratorEmail[];
 }

@@ -8,7 +8,7 @@ export async function POST(
   try {
     const env = await getEnv();
     const user = await requireUser(request);
-    await requireRole(env.DB, user.id, ['reviewer', 'administrator']);
+    await requireRole(env.DB, user, ['reviewer', 'administrator']);
     const { id } = await context.params;
     const body = (await request.json()) as {
       status?: 'upheld' | 'overruled';

@@ -6,7 +6,7 @@ export async function GET(request: Request): Promise<Response> {
   try {
     const env = await getEnv();
     const user = await requireUser(request);
-    await requireRole(env.DB, user.id, ['reviewer', 'administrator']);
+    await requireRole(env.DB, user, ['reviewer', 'administrator']);
     const rows = await env.DB.prepare(
       `SELECT r.id, r.submission_id, r.reason, r.status, r.created_at,
               u.name AS participant_name, u.email AS participant_email,
