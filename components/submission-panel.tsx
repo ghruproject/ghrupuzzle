@@ -12,6 +12,10 @@ import {
 import { usePathname } from 'next/navigation';
 import type { ExerciseMode } from '@/lib/exercises';
 import {
+  buildPracticeSampleFeedback,
+  practiceFieldLabel,
+} from '@/lib/practice-feedback';
+import {
   conditionMatches,
   type ContractCondition,
   type SubmissionField,
@@ -180,6 +184,13 @@ export function SubmissionPanel({
   const visibleSampleIds = filteredSampleIds.slice(
     (currentSamplePage - 1) * SUBMISSION_PAGE_SIZE,
     currentSamplePage * SUBMISSION_PAGE_SIZE,
+  );
+  const practiceFeedback = useMemo(
+    () =>
+      feedback?.details
+        ? buildPracticeSampleFeedback(sampleIds, feedback.details.items)
+        : [],
+    [feedback?.details, sampleIds],
   );
 
   function updateValue(sampleId: string, field: string, value: string) {
@@ -545,34 +556,141 @@ export function SubmissionPanel({
           ) : null}
 
           {mode === 'practice' && feedback?.details ? (
-            <div className="rounded-xl border border-[var(--gx-border)] p-4">
-              <h3 className="font-semibold text-[var(--gx-text)] mt-0 mb-2">
-                Practice feedback
-              </h3>
-              <div className="space-y-3">
-                {sampleIds.map((sampleId) => {
-                  const sampleItems = feedback.details?.items.filter(
-                    (item) => item.sampleId === sampleId,
-                  ) ?? [];
-                  const feedbackItems = sampleItems.filter(
-                    (item) =>
-                      ['qc_status', 'failure_reason'].includes(item.field) || !item.correct,
-                  );
-                  return (
-                    <div key={sampleId}>
-                      <h4 className="font-mono text-sm text-[var(--gx-text)] my-0">{sampleId}</h4>
-                      <ul className="text-sm text-[var(--gx-text-muted)] pl-5 my-1">
-                        {feedbackItems.map((item) => (
-                          <li key={item.field}>
-                            {item.field}: {item.correct ? 'correct' : `check this field (expected ${item.expected || 'blank'})`}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  );
-                })}
+            <section
+              className="overflow-hidden rounded-2xl border border-[var(--gx-border)]"
+              aria-labelledby="practice-feedback-heading"
+            >
+              <div
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[var(--gx-border)] p-5"
+                style={{
+                  background: feedback.passed
+                    ? 'var(--gx-accent-dim)'
+                    : 'color-mix(in srgb, var(--gx-warning) 10%, transparent)',
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xl font-bold text-white"
+                    style={{
+                      background: feedback.passed
+                        ? 'var(--gx-success)'
+                        : 'var(--gx-warning)',
+                    }}
+                    aria-hidden="true"
+                  >
+                    {feedback.passed ? '✓' : '!'}
+                  </span>
+                  <div>
+                    <h3
+                      id="practice-feedback-heading"
+                      className="font-bold text-lg text-[var(--gx-text)] m-0"
+                    >
+                      {feedback.passed ? 'Practice assessment passed' : 'Review your results'}
+                    </h3>
+                    <p className="text-sm text-[var(--gx-text-muted)] mt-1 mb-0">
+                      {feedback.passed
+                        ? 'Your submitted answers meet the assessment threshold.'
+                        : 'Correct the highlighted answers and submit again when ready.'}
+                    </p>
+                  </div>
+                </div>
+                <span
+                  className="self-start sm:self-auto rounded-full border border-[var(--gx-border)] bg-[var(--gx-surface)] px-4 py-2 text-sm font-bold text-[var(--gx-text)]"
+                  aria-label={`Score ${feedback.earned} out of ${feedback.possible}`}
+                >
+                  {feedback.earned}/{feedback.possible} points
+                </span>
               </div>
-            </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[var(--gx-bg-alt)] p-4">
+                {practiceFeedback.map((sample) => (
+                  <article
+                    key={sample.sampleId}
+                    className="rounded-xl border bg-[var(--gx-surface)] p-4"
+                    style={{
+                      borderColor: sample.allCorrect
+                        ? 'var(--gx-success)'
+                        : 'var(--gx-error)',
+                      boxShadow: sample.allCorrect
+                        ? 'inset 4px 0 0 var(--gx-success)'
+                        : 'inset 4px 0 0 var(--gx-error)',
+                    }}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h4 className="font-mono font-bold text-sm text-[var(--gx-text)] m-0">
+                        {sample.sampleId}
+                      </h4>
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
+                        style={{
+                          background: sample.allCorrect
+                            ? 'var(--gx-accent-dim)'
+                            : 'color-mix(in srgb, var(--gx-error) 10%, transparent)',
+                          color: sample.allCorrect
+                            ? 'var(--gx-success)'
+                            : 'var(--gx-error)',
+                        }}
+                      >
+                        {sample.allCorrect
+                          ? '✓ All assessed fields correct'
+                          : `${sample.correctCount}/${sample.totalCount} correct`}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                      {sample.highlightedItems.map((item) => (
+                        <div
+                          key={item.field}
+                          className="rounded-lg border border-[var(--gx-border)] p-3"
+                          style={{
+                            background: item.correct
+                              ? 'var(--gx-accent-dim)'
+                              : 'color-mix(in srgb, var(--gx-error) 7%, transparent)',
+                          }}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-semibold text-sm text-[var(--gx-text)] m-0">
+                                {practiceFieldLabel(item.field)}
+                              </p>
+                              <p className="font-mono text-xs text-[var(--gx-text-muted)] mt-0.5 mb-0">
+                                {item.field}
+                              </p>
+                            </div>
+                            <span
+                              className="inline-flex items-center gap-1 text-xs font-bold"
+                              style={{
+                                color: item.correct
+                                  ? 'var(--gx-success)'
+                                  : 'var(--gx-error)',
+                              }}
+                            >
+                              {item.correct ? '✓ Correct' : '✕ Review'}
+                            </span>
+                          </div>
+                          {!item.correct ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 text-xs">
+                              <div>
+                                <span className="block text-[var(--gx-text-muted)]">Submitted</span>
+                                <span className="font-mono text-[var(--gx-text)]">
+                                  {item.submitted || 'blank'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="block text-[var(--gx-text-muted)]">Expected</span>
+                                <span className="font-mono text-[var(--gx-text)]">
+                                  {item.expected || 'blank'}
+                                </span>
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
           ) : null}
         </div>
       ) : (
@@ -582,7 +700,9 @@ export function SubmissionPanel({
             : 'Assessment submissions for this practice exercise are being prepared. The preview and downloads remain available.'}
         </p>
       )}
-      {message ? <p role="status" className="text-[var(--gx-text-muted)] mt-4">{message}</p> : null}
+      {message && !(mode === 'practice' && feedback?.details) ? (
+        <p role="status" className="text-[var(--gx-text-muted)] mt-4">{message}</p>
+      ) : null}
     </section>
   );
 }
