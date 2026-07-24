@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  detectDelimiter,
   parseCsv,
+  parseDelimitedText,
   scoreSubmission,
+  SubmissionValidationError,
   type AnswerKey,
   type ScoringPolicy,
+  validateSubmissionCompleteness,
 } from '../lib/scoring';
 
 const answerKey: AnswerKey = {
@@ -29,9 +33,26 @@ test('parseCsv handles quoted commas and escaped quotes', () => {
   assert.deepEqual(rows, [{ sample: 'Sample_a', notes: 'mixed, "check"' }]);
 });
 
+test('parseDelimitedText accepts tab-separated files and quoted tabs', () => {
+  const text = 'sample_id\tnotes\nSample_a\t"mixed\tcheck"\n';
+  assert.equal(detectDelimiter(text), '\t');
+  assert.deepEqual(parseDelimitedText(text), [
+    { sample_id: 'Sample_a', notes: 'mixed\tcheck' },
+  ]);
+});
+
+test('parseDelimitedText rejects inconsistent row widths with a useful row number', () => {
+  assert.throws(
+    () => parseDelimitedText('sample_id,st\nSample_a,15,extra\n'),
+    (error: unknown) =>
+      error instanceof SubmissionValidationError
+      && /row 2 has 3 columns; expected 2/i.test(error.message),
+  );
+});
+
 test('scoreSubmission normalises headers and values', () => {
   const score = scoreSubmission(
-    'Sample ID,ST,K locus\nSample_a,15,kl24\nSample_b,307,KL102\n',
+    'Sample ID,ST,K locus\n  sample_A  , 15 , kl24 \nSAMPLE_B,307,KL102\n',
     answerKey,
   );
   assert.equal(score.earned, 4);
@@ -46,6 +67,10 @@ test('scoreSubmission fails incomplete sample sets', () => {
   assert.equal(score.possible, 4);
   assert.equal(score.passed, false);
   assert.deepEqual(score.missingSamples, ['Sample_b']);
+  assert.throws(
+    () => validateSubmissionCompleteness(score),
+    /missing 1 expected sample/i,
+  );
 });
 
 test('scoreSubmission rejects duplicate sample IDs', () => {
@@ -84,6 +109,87 @@ test('carbapenemase lists are order independent', () => {
   };
   const score = scoreSubmission('sample,bla_carb\nSample_a,"blaKPC,blaNDM"\n', genes);
   assert.equal(score.passed, true);
+});
+
+test('unordered-list policies accept common separators, whitespace and duplicates', () => {
+  const genes: AnswerKey = {
+    ...answerKey,
+    samples: [{ sample_id: 'Sample_a', answers: { resistance_genes: ['blaKPC', 'blaNDM'] } }],
+  };
+  const policy: ScoringPolicy = {
+    schema_version: '2.0',
+    release_id: answerKey.release_id,
+    scorer_version: '2.0',
+    pass_threshold: 0.8,
+    require_all_samples: true,
+    reject_unexpected_samples: true,
+    fields: [
+      {
+        name: 'resistance_genes',
+        scored: true,
+        scorer: 'unordered_list',
+        weight: 1,
+        aliases: ['genes'],
+      },
+    ],
+  };
+  const score = scoreSubmission(
+    'sample_id\tgenes\nSample_a\t" blaNDM | blaKPC ; blaNDM "\n',
+    genes,
+    policy,
+  );
+  assert.equal(score.passed, true);
+});
+
+test('controlled result tokens accept spaces, hyphens and underscores', () => {
+  const assembly: AnswerKey = {
+    schema_version: '2.0',
+    release_id: 'assembly',
+    exercise: 'assembly',
+    mode: 'challenge',
+    samples: [
+      { sample_id: 'A', answers: { qc: 'FAIL', error: 'LOW_COVERAGE' } },
+      { sample_id: 'B', answers: { qc: 'PASS', error: '' } },
+    ],
+  };
+  const policy: ScoringPolicy = {
+    schema_version: '2.0',
+    release_id: 'assembly',
+    scorer_version: '2.0',
+    pass_threshold: 0.8,
+    require_all_samples: true,
+    reject_unexpected_samples: true,
+    fields: [
+      { name: 'qc', scored: true, scorer: 'exact', weight: 1, aliases: [] },
+      { name: 'error', scored: true, scorer: 'exact', weight: 1, aliases: [] },
+    ],
+  };
+  const score = scoreSubmission(
+    'sample_id,qc,error\nA, fail , low-coverage\nB,PASS,N/A\n',
+    assembly,
+    policy,
+  );
+  assert.equal(score.earned, score.possible);
+  assert.equal(score.passed, true);
+});
+
+test('scoreSubmission rejects files missing assessed columns', () => {
+  const policy: ScoringPolicy = {
+    schema_version: '2.0',
+    release_id: answerKey.release_id,
+    scorer_version: '2.0',
+    pass_threshold: 0.8,
+    require_all_samples: true,
+    reject_unexpected_samples: true,
+    fields: [
+      { name: 'st', scored: true, scorer: 'exact', weight: 1, aliases: [] },
+      { name: 'k_locus', scored: true, scorer: 'exact', weight: 1, aliases: [] },
+    ],
+  };
+  assert.throws(
+    () => scoreSubmission('sample_id,st\nSample_a,15\nSample_b,307\n', answerKey, policy),
+    /missing assessed column: k_locus/i,
+  );
 });
 
 test('v2 policy controls aliases, fields, threshold, and unexpected samples', () => {
@@ -157,6 +263,6 @@ test('v2 partition weight does not grow quadratically', () => {
     outbreak,
     policy,
   );
-  assert.ok(Math.abs(score.possible - 1) < 1e-9);
-  assert.ok(Math.abs(score.earned - 1) < 1e-9);
+  assert.equal(score.possible, 1);
+  assert.equal(score.earned, 1);
 });

@@ -46,28 +46,39 @@ export function SubmissionPanel({
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!release) return;
+    const form = event.currentTarget;
     setBusy(true);
     setMessage('');
-    const formData = new FormData(event.currentTarget);
+    const formData = new FormData(form);
     formData.set('releaseId', release.id);
-    const response = await fetch('/api/submissions', { method: 'POST', body: formData });
-    const result = (await response.json()) as {
-      error?: string;
-      earned?: number;
-      possible?: number;
-      passed?: boolean;
-    };
-    setBusy(false);
-    if (!response.ok) {
-      setMessage(result.error ?? 'Submission failed.');
-      return;
+    try {
+      const response = await fetch('/api/submissions', { method: 'POST', body: formData });
+      const contentType = response.headers.get('content-type') ?? '';
+      const result = contentType.includes('application/json')
+        ? ((await response.json()) as {
+            error?: string;
+            earned?: number;
+            possible?: number;
+            passed?: boolean;
+          })
+        : { error: (await response.text()).trim() };
+      if (!response.ok) {
+        setMessage(result.error || 'Submission failed.');
+        return;
+      }
+      setMessage(
+        mode === 'challenge'
+          ? 'Submitted successfully. Your challenge result has been recorded; scores will be available after assessment.'
+          : `Submitted successfully. Provisional score: ${result.earned}/${result.possible} — ${
+              result.passed ? 'pass' : 'not yet passed'
+            }.`,
+      );
+      form.reset();
+    } catch {
+      setMessage('Submission could not be completed. Check your connection and try again.');
+    } finally {
+      setBusy(false);
     }
-    setMessage(
-      `Submitted successfully. Provisional score: ${result.earned}/${result.possible} — ${
-        result.passed ? 'pass' : 'not yet passed'
-      }.`,
-    );
-    event.currentTarget.reset();
   }
 
   return (
@@ -92,13 +103,23 @@ export function SubmissionPanel({
         </div>
       ) : release ? (
         <form className="flex flex-col gap-4" onSubmit={submit}>
-          <label className="label" htmlFor={`${exercise}-${mode}-submission`}>Completed CSV result sheet</label>
+          <div>
+            <label className="label" htmlFor={`${exercise}-${mode}-submission`}>
+              Completed CSV or TSV result sheet
+            </label>
+            <p className="text-sm text-[var(--gx-text-muted)] mt-1 mb-0">
+              Use the supplied sample sheet, keep one row per sample and retain every assessed
+              column. Files must be UTF-8 encoded. Header capitalisation and surrounding whitespace
+              in answers do not affect scoring. Sample identifiers are matched case-insensitively;
+              unordered gene lists may use commas, semicolons or pipes.
+            </p>
+          </div>
           <input
             id={`${exercise}-${mode}-submission`}
             className="gx-input w-full"
             type="file"
             name="file"
-            accept=".csv,text/csv"
+            accept=".csv,.tsv,text/csv,text/tab-separated-values"
             required
           />
           <button className="gx-btn gx-btn-primary self-start" type="submit" disabled={busy}>

@@ -1,6 +1,22 @@
 import { getEnv } from '@/lib/cloudflare';
 import { jsonError, requireReleaseAccess, requireUser } from '@/lib/assessment';
 
+const FIELD_GUIDANCE: Partial<
+  Record<
+    'typing' | 'assembly' | 'hybrid' | 'outbreak',
+    Record<string, string>
+  >
+> = {
+  assembly: {
+    error:
+      'Detected problem type. Leave blank when no problem is detected; otherwise use CONTAMINATED or LOW_COVERAGE.',
+  },
+  hybrid: {
+    error:
+      'Detected problem type. Leave blank when no problem is detected; otherwise use CONTAMINATED or LOW_LONG_COVERAGE.',
+  },
+};
+
 export async function GET(
   request: Request,
   context: { params: Promise<{ id: string }> },
@@ -70,7 +86,11 @@ export async function GET(
         title: manifest.title,
         description: manifest.description,
         instructions,
-        fields: submission.fields,
+        fields: submission.fields.map((field) => ({
+          ...field,
+          description:
+            FIELD_GUIDANCE[release.exercise]?.[field.name] ?? field.description,
+        })),
       },
       access: {
         releaseDatabaseId: release.id,
