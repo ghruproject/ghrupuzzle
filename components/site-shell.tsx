@@ -42,7 +42,22 @@ function PuzzleIcon() {
 function ExerciseLinks({ mobile = false }: { mobile?: boolean }) {
   const className = mobile ? 'gx-nav-dropdown-link' : 'gx-nav-link';
   const { data: session, isPending } = authClient.useSession();
+  const [roles, setRoles] = useState<string[]>([]);
   const router = useRouter();
+
+  useEffect(() => {
+    if (!session) {
+      setRoles([]);
+      return;
+    }
+    fetch('/api/account/roles')
+      .then(async (response) => {
+        if (!response.ok) return { roles: [] };
+        return response.json() as Promise<{ roles: string[] }>;
+      })
+      .then((result) => setRoles(result.roles ?? []))
+      .catch(() => setRoles([]));
+  }, [session]);
 
   async function signOut() {
     await authClient.signOut();
@@ -66,6 +81,16 @@ function ExerciseLinks({ mobile = false }: { mobile?: boolean }) {
           <Link href="/dashboard" className={className}>
             Dashboard
           </Link>
+          {roles.some((role) => role === 'reviewer' || role === 'administrator') ? (
+            <Link href="/review" className={className}>
+              Reviews
+            </Link>
+          ) : null}
+          {roles.includes('administrator') ? (
+            <Link href="/admin" className={className}>
+              Admin
+            </Link>
+          ) : null}
           <button type="button" className={className} onClick={signOut}>
             Sign out
           </button>
