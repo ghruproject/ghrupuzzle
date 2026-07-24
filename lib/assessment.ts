@@ -103,8 +103,8 @@ export function jsonError(error: unknown): Response {
   return Response.json({ error: 'Request could not be completed' }, { status: 500 });
 }
 
-export function safeFilename(value: string): string {
-  const basename = value.split(/[\\/]/).pop() ?? 'submission.csv';
+export function safeFilename(value: string, format: 'csv' | 'tsv' = 'csv'): string {
+  const basename = value.split(/[\\/]/).pop() ?? `submission.${format}`;
   const safe = basename.replace(/[^A-Za-z0-9._-]/g, '_');
-  return safe.toLowerCase().endsWith('.csv') ? safe : `${safe}.csv`;
+  return /\.(csv|tsv)$/i.test(safe) ? safe : `${safe}.${format}`;
 }

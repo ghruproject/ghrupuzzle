@@ -92,14 +92,16 @@ investigate unusually long branches before assigning clusters.
 
 ## 6. Combine the tree and metadata
 
-Tree tip names must match metadata identifiers exactly. Before creating a
-Microreact project:
+Tree tip names must match metadata identifiers exactly. A visualisation tool
+such as [Microreact](https://microreact.org/) can be useful for reviewing the
+tree alongside sample metadata. Before combining them:
 
 - keep one metadata row per sample;
 - use an unambiguous date format;
 - check that tree and metadata identifiers join;
 - inspect colours, locations and dates; and
-- export the requested `.microreact` file when required.
+- confirm that the visualised tree and metadata support your reported cluster
+  assignments.
 
 ## Assign clusters
 

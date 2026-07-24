@@ -53,7 +53,7 @@ files.
 - [ ] There is one row per sample and no duplicate row.
 - [ ] Controlled values and separators are consistent.
 - [ ] Formulas were replaced by values.
-- [ ] The file was saved as a valid UTF-8 CSV.
+- [ ] The file was saved as a valid UTF-8 CSV or tab-separated TSV.
 - [ ] The saved file was reopened and checked.
 
 ### Additional files
@@ -64,7 +64,7 @@ files.
 - [ ] The package contains results, not unnecessary intermediate files.
 - [ ] No password, token or confidential local path is included.
 
-## CSV checks
+## CSV and TSV checks
 
 Before uploading:
 
@@ -72,10 +72,15 @@ Before uploading:
 - retain the original column names;
 - use the public sample identifier exactly;
 - remove formulas and save calculated values;
-- use UTF-8 CSV unless instructed otherwise;
-- quote commas contained within values;
+- use UTF-8 CSV or tab-separated TSV;
+- quote delimiters contained within values;
 - remove blank trailing rows and duplicate headers; and
 - reopen the saved file in a plain-text editor.
+
+The portal ignores capitalisation and surrounding whitespace when it compares
+answers. Comma-, semicolon- and pipe-separated unordered gene lists are
+equivalent. Sample identifiers are matched case-insensitively, but you should
+still retain the identifiers from the supplied sheet to avoid ambiguity.
 
 ## Troubleshooting
 
