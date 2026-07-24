@@ -77,15 +77,21 @@ export function DashboardHeader({
               Track your practice results and challenge participation.
             </p>
           </div>
-          <div className="flex flex-wrap gap-3 lg:flex-nowrap">
-            <Link href="/#practice" className="gx-btn gx-btn-primary">
+          <div className="flex flex-wrap gap-3 lg:shrink-0 lg:flex-nowrap">
+            <Link
+              href="/#practice"
+              className="gx-btn gx-btn-primary whitespace-nowrap"
+            >
               Open practice exercises
             </Link>
-            <Link href="/challenge" className="gx-btn gx-btn-secondary">
+            <Link
+              href="/challenge"
+              className="gx-btn gx-btn-secondary whitespace-nowrap"
+            >
               View challenge
             </Link>
             <button
-              className="gx-btn gx-btn-secondary"
+              className="gx-btn gx-btn-secondary whitespace-nowrap"
               type="button"
               onClick={openProfile}
             >
