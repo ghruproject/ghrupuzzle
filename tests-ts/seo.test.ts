@@ -2,7 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import robots from '../app/robots';
 import sitemap from '../app/sitemap';
-import { publicPageMetadata, SITE_URL } from '../lib/seo';
+import {
+  publicPageMetadata,
+  SITE_DESCRIPTION,
+  SITE_URL,
+  SITE_VALUE_PROPOSITION,
+} from '../lib/seo';
+import { SOCIAL_IMAGE_ALT } from '../lib/social-image';
 
 test('public metadata uses the canonical production origin and large social cards', () => {
   const metadata = publicPageMetadata({
@@ -16,6 +22,14 @@ test('public metadata uses the canonical production origin and large social card
   assert.ok(metadata.twitter && 'card' in metadata.twitter);
   assert.equal(metadata.twitter.card, 'summary_large_image');
   assert.deepEqual(metadata.twitter.images, ['/twitter-image']);
+});
+
+test('social preview copy stays aligned with the homepage proposition', () => {
+  assert.match(SOCIAL_IMAGE_ALT, new RegExp(SITE_DESCRIPTION.replace('.', '\\.')));
+  assert.match(
+    SOCIAL_IMAGE_ALT,
+    new RegExp(SITE_VALUE_PROPOSITION.replace('.', '\\.')),
+  );
 });
 
 test('sitemap contains public practice and guide pages but excludes account routes', () => {

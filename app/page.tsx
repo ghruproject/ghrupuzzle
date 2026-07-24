@@ -1,4 +1,5 @@
 import { PracticeCards } from '@/components/practice-cards';
+import { SITE_DESCRIPTION, SITE_VALUE_PROPOSITION } from '@/lib/seo';
 
 export default function Home() {
   return (
@@ -8,13 +9,12 @@ export default function Home() {
           ghrupuzzles
         </div>
         <h1 className="text-4xl font-bold leading-tight text-[var(--gx-text)] mt-0 mb-4">
-          Complex simulated microbial genomics datasets for testing analytical proficiency and
-          bioinformatics pipelines.
+          {SITE_DESCRIPTION}
         </h1>
         <p className="text-lg text-[var(--gx-text-muted)] max-w-3xl mb-0">
           Work through short-read assembly, hybrid assembly, genotyping and outbreak analysis.
-          Test your bioinformatics pipelines, assess your team’s proficiency and identify areas for
-          improvement using realistic, reproducible tasks.
+          {' '}
+          {SITE_VALUE_PROPOSITION}
         </p>
       </section>
 

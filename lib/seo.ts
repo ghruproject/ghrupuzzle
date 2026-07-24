@@ -4,6 +4,8 @@ export const SITE_NAME = 'GHRUPUZZLES';
 export const SITE_URL = new URL('https://ghrupuzzle.vercel.app');
 export const SITE_DESCRIPTION =
   'Complex simulated microbial genomics datasets for testing analytical proficiency and bioinformatics pipelines.';
+export const SITE_VALUE_PROPOSITION =
+  'Test your bioinformatics pipelines, assess your team’s proficiency and identify areas for improvement using realistic, reproducible tasks.';
 
 interface PublicPageMetadataOptions {
   title: string;

@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og';
+import { SITE_DESCRIPTION, SITE_VALUE_PROPOSITION } from './seo';
 
 export const SOCIAL_IMAGE_SIZE = {
   width: 1200,
@@ -6,7 +7,7 @@ export const SOCIAL_IMAGE_SIZE = {
 };
 
 export const SOCIAL_IMAGE_ALT =
-  'GHRUPUZZLES — benchmark microbial genomics workflows with simulated datasets';
+  `GHRUPUZZLES — ${SITE_DESCRIPTION} ${SITE_VALUE_PROPOSITION}`;
 
 export function createSocialImage() {
   return new ImageResponse(
@@ -68,28 +69,27 @@ export function createSocialImage() {
               marginBottom: 18,
             }}
           >
-            Practice · assess · improve
+            Realistic data · reproducible tasks
           </div>
           <div
             style={{
-              fontSize: 64,
+              fontSize: 52,
               lineHeight: 1.06,
               fontWeight: 850,
               letterSpacing: -2,
             }}
           >
-            Benchmark microbial genomics workflows.
+            {SITE_DESCRIPTION}
           </div>
           <div
             style={{
               marginTop: 22,
               color: '#b9c6d6',
-              fontSize: 27,
+              fontSize: 25,
               lineHeight: 1.35,
             }}
           >
-            Complex simulated datasets for pipeline testing, practice exercises and timed
-            challenges.
+            {SITE_VALUE_PROPOSITION}
           </div>
         </div>
 
