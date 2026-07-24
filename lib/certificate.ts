@@ -9,6 +9,18 @@ export interface CertificateDetails {
   publicCode: string;
 }
 
+export function createCertificatePublicCode(): string {
+  const random = crypto.getRandomValues(new Uint8Array(18));
+  return btoa(String.fromCharCode(...random))
+    .replaceAll('+', '-')
+    .replaceAll('/', '_')
+    .replaceAll('=', '');
+}
+
+export function certificateVerificationUrl(baseUrl: string, publicCode: string): string {
+  return `${baseUrl.replace(/\/$/, '')}/verify/${publicCode}`;
+}
+
 export async function renderCertificate(details: CertificateDetails): Promise<Uint8Array> {
   const document = await PDFDocument.create();
   const page = document.addPage([842, 595]);

@@ -1,6 +1,10 @@
 import { getEnv } from '@/lib/cloudflare';
 import { jsonError, requireRole, requireUser } from '@/lib/assessment';
-import { renderCertificate } from '@/lib/certificate';
+import {
+  certificateVerificationUrl,
+  createCertificatePublicCode,
+  renderCertificate,
+} from '@/lib/certificate';
 
 const REQUIRED_EXERCISES = new Set(['typing', 'assembly', 'hybrid', 'outbreak']);
 
@@ -63,14 +67,10 @@ export async function POST(request: Request): Promise<Response> {
     if (openReview) {
       return Response.json({ error: 'An open review must be resolved first' }, { status: 409 });
     }
-    const random = crypto.getRandomValues(new Uint8Array(18));
-    const publicCode = btoa(String.fromCharCode(...random))
-      .replaceAll('+', '-')
-      .replaceAll('/', '_')
-      .replaceAll('=', '');
+    const publicCode = createCertificatePublicCode();
     const certificateId = crypto.randomUUID();
     const issuedAt = new Date().toISOString();
-    const verificationUrl = `${env.BETTER_AUTH_URL.replace(/\/$/, '')}/verify/${publicCode}`;
+    const verificationUrl = certificateVerificationUrl(env.BETTER_AUTH_URL, publicCode);
     const participantName = participant.name.trim() || participant.email;
     const snapshot = {
       participantName,
