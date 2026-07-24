@@ -108,7 +108,7 @@ export function ParticipantRecord() {
           </div>
         ) : (
           <p className="text-[var(--gx-text-muted)]">
-            No submissions yet. Choose a <Link href="/practice">practice exercise</Link> to get started.
+            No submissions yet. Choose a <Link href="/#practice">practice exercise</Link> to get started.
           </p>
         )}
       </section>

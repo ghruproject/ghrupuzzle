@@ -5,7 +5,7 @@ import { publicPageMetadata } from '@/lib/seo';
 export const metadata = publicPageMetadata({
   title: 'Hybrid assembly practice',
   description:
-    'Benchmark bacterial hybrid assembly, polishing, circularisation and completeness using simulated short- and long-read data.',
+    'Practise long-read assembly, taxonomic identification and read and assembly quality control using simulated short- and long-read data.',
   path: '/hybrid-assembly/practice',
   keywords: ['hybrid assembly exercise', 'long-read bacterial genome assembly'],
 });

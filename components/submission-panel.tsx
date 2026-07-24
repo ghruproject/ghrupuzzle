@@ -1,7 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import {
+  type DragEvent,
+  type FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { usePathname } from 'next/navigation';
 import type { ExerciseMode } from '@/lib/exercises';
 import {
@@ -56,6 +63,8 @@ interface SubmissionResult {
 
 type SubmissionRows = Record<string, Record<string, string>>;
 
+const SUBMISSION_PAGE_SIZE = 25;
+
 function escapeCsv(value: string): string {
   return /[",\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
 }
@@ -89,6 +98,11 @@ export function SubmissionPanel({
   const [issues, setIssues] = useState<ValidationIssue[]>([]);
   const [feedback, setFeedback] = useState<SubmissionResult | null>(null);
   const [busy, setBusy] = useState(false);
+  const [sampleQuery, setSampleQuery] = useState('');
+  const [samplePage, setSamplePage] = useState(1);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const uploadInput = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -150,6 +164,22 @@ export function SubmissionPanel({
   const issueMap = useMemo(
     () => new Map(issues.map((issue) => [issueKey(issue.sampleId, issue.field), issue])),
     [issues],
+  );
+  const filteredSampleIds = useMemo(() => {
+    const query = sampleQuery.trim().toLocaleLowerCase('en');
+    if (!query) return sampleIds;
+    return sampleIds.filter((sampleId) =>
+      sampleId.toLocaleLowerCase('en').includes(query),
+    );
+  }, [sampleIds, sampleQuery]);
+  const samplePageCount = Math.max(
+    1,
+    Math.ceil(filteredSampleIds.length / SUBMISSION_PAGE_SIZE),
+  );
+  const currentSamplePage = Math.min(samplePage, samplePageCount);
+  const visibleSampleIds = filteredSampleIds.slice(
+    (currentSamplePage - 1) * SUBMISSION_PAGE_SIZE,
+    currentSamplePage * SUBMISSION_PAGE_SIZE,
   );
 
   function updateValue(sampleId: string, field: string, value: string) {
@@ -222,9 +252,41 @@ export function SubmissionPanel({
   async function submitUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
-    const upload = new FormData(form).get('file');
-    if (!(upload instanceof File) || !upload.size) return;
-    if (await postSubmission(upload)) form.reset();
+    if (!uploadFile) {
+      setMessage('Choose a CSV or TSV result sheet before uploading.');
+      return;
+    }
+    if (await postSubmission(uploadFile)) {
+      form.reset();
+      setUploadFile(null);
+    }
+  }
+
+  function selectUpload(file: File | null) {
+    if (!file) return;
+    const accepted =
+      /\.(csv|tsv)$/i.test(file.name)
+      || ['text/csv', 'text/tab-separated-values'].includes(file.type);
+    if (!accepted) {
+      setUploadFile(null);
+      setMessage('Choose a CSV or TSV result sheet.');
+      if (uploadInput.current) uploadInput.current.value = '';
+      return;
+    }
+    if (!file.size) {
+      setUploadFile(null);
+      setMessage('The selected result sheet is empty.');
+      if (uploadInput.current) uploadInput.current.value = '';
+      return;
+    }
+    setMessage('');
+    setUploadFile(file);
+  }
+
+  function dropUpload(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    setDragActive(false);
+    selectUpload(event.dataTransfer.files[0] ?? null);
   }
 
   return (
@@ -249,21 +311,9 @@ export function SubmissionPanel({
         </div>
       ) : release && details ? (
         <div className="flex flex-col gap-7">
-          <div className="rounded-xl border border-[var(--gx-border)] bg-[var(--gx-accent-dim)] p-4">
-            <h3 className="font-semibold text-[var(--gx-text)] mt-0 mb-2">Before you start</h3>
-            <ul className="text-sm text-[var(--gx-text-muted)] pl-5 mb-3 space-y-1">
-              <li>Every release sample must appear exactly once.</li>
-              <li>PASS requires NONE as the failure reason and reveals the analytical fields.</li>
-              <li>FAIL requires a categorical non-NONE reason; unavailable analytical fields are not scored.</li>
-              <li>Fields marked “Supporting evidence — unscored” do not affect the automatic result.</li>
-            </ul>
-            <a className="gx-btn gx-btn-secondary" href={details.sample_sheet.url}>
-              Download CSV template
-            </a>
-          </div>
-
           <form className="flex flex-col gap-4" onSubmit={submitStructured}>
-            <div>
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+              <div>
               <h3 className="text-lg font-semibold text-[var(--gx-text)] mt-0 mb-1">
                 Complete results online
               </h3>
@@ -271,6 +321,22 @@ export function SubmissionPanel({
                 Sample identifiers are fixed by this release. Controlled fields use only the
                 choices declared in its submission schema.
               </p>
+              </div>
+              {sampleIds.length > 10 ? (
+                <label className="min-w-64 text-sm text-[var(--gx-text-muted)]">
+                  Search samples
+                  <input
+                    className="gx-input w-full mt-1"
+                    type="search"
+                    value={sampleQuery}
+                    onChange={(event) => {
+                      setSampleQuery(event.target.value);
+                      setSamplePage(1);
+                    }}
+                    placeholder="Enter a sample identifier"
+                  />
+                </label>
+              ) : null}
             </div>
             <div className="overflow-x-auto border border-[var(--gx-border)] rounded-xl">
               <table className="w-full border-collapse min-w-max">
@@ -295,7 +361,7 @@ export function SubmissionPanel({
                   </tr>
                 </thead>
                 <tbody>
-                  {sampleIds.map((sampleId, rowIndex) => {
+                  {visibleSampleIds.map((sampleId) => {
                     const values = rows[sampleId] ?? {};
                     return (
                       <tr key={sampleId}>
@@ -334,6 +400,7 @@ export function SubmissionPanel({
                                 <input
                                   aria-label={`${field.label} for ${sampleId}`}
                                   className="gx-input min-w-44"
+                                  placeholder={field.scorer === 'partition' ? 'e.g. A' : undefined}
                                   value={values[field.name] ?? ''}
                                   onChange={(event) =>
                                     updateValue(sampleId, field.name, event.target.value)
@@ -342,7 +409,7 @@ export function SubmissionPanel({
                               )}
                               {issue ? (
                                 <span className="block mt-1 max-w-48 text-xs text-red-500" role="alert">
-                                  Row {issue.row ?? rowIndex + 2}: {issue.message}
+                                  Row {issue.row ?? sampleIds.indexOf(sampleId) + 2}: {issue.message}
                                 </span>
                               ) : null}
                             </td>
@@ -354,6 +421,43 @@ export function SubmissionPanel({
                 </tbody>
               </table>
             </div>
+            {filteredSampleIds.length === 0 ? (
+              <p className="text-sm text-[var(--gx-text-muted)] m-0">
+                No sample identifiers match “{sampleQuery}”.
+              </p>
+            ) : null}
+            {sampleIds.length > SUBMISSION_PAGE_SIZE && filteredSampleIds.length ? (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-[var(--gx-text-muted)] m-0">
+                  Showing {(currentSamplePage - 1) * SUBMISSION_PAGE_SIZE + 1}–
+                  {Math.min(currentSamplePage * SUBMISSION_PAGE_SIZE, filteredSampleIds.length)} of{' '}
+                  {filteredSampleIds.length} matching samples
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    className="gx-btn gx-btn-secondary"
+                    type="button"
+                    disabled={currentSamplePage <= 1}
+                    onClick={() => setSamplePage((page) => Math.max(1, page - 1))}
+                  >
+                    Previous
+                  </button>
+                  <span className="self-center text-sm text-[var(--gx-text-muted)]">
+                    Page {currentSamplePage} of {samplePageCount}
+                  </span>
+                  <button
+                    className="gx-btn gx-btn-secondary"
+                    type="button"
+                    disabled={currentSamplePage >= samplePageCount}
+                    onClick={() =>
+                      setSamplePage((page) => Math.min(samplePageCount, page + 1))
+                    }
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            ) : null}
             <button className="gx-btn gx-btn-primary self-start" type="submit" disabled={busy}>
               {busy ? 'Checking submission…' : 'Submit online results'}
             </button>
@@ -373,15 +477,53 @@ export function SubmissionPanel({
                 the release contract.
               </p>
             </div>
-            <input
-              id={`${exercise}-${mode}-submission`}
-              className="gx-input w-full"
-              type="file"
-              name="file"
-              accept=".csv,.tsv,text/csv,text/tab-separated-values"
-              required
-            />
-            <button className="gx-btn gx-btn-secondary self-start" type="submit" disabled={busy}>
+            <div className="gx-file-upload">
+              <label
+                className={`gx-file-upload-area ${
+                  dragActive ? 'border-[var(--gx-accent)] bg-[var(--gx-accent-dim)]' : ''
+                }`}
+                htmlFor={`${exercise}-${mode}-submission`}
+                onDragEnter={(event) => {
+                  event.preventDefault();
+                  setDragActive(true);
+                }}
+                onDragOver={(event) => event.preventDefault()}
+                onDragLeave={() => setDragActive(false)}
+                onDrop={dropUpload}
+              >
+                <svg
+                  className="gx-file-upload-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  aria-hidden="true"
+                >
+                  <path d="M12 16V4m0 0-4 4m4-4 4 4M5 14v5h14v-5" />
+                </svg>
+                <span className="gx-file-upload-label">
+                  {uploadFile ? uploadFile.name : 'Drop a completed CSV or TSV result sheet here'}
+                </span>
+                <span className="gx-file-upload-hint">
+                  <span className="text-[var(--gx-accent)] underline underline-offset-2">
+                    {uploadFile ? 'Choose a different file' : 'Choose a file from your computer'}
+                  </span>
+                </span>
+                <input
+                  ref={uploadInput}
+                  id={`${exercise}-${mode}-submission`}
+                  type="file"
+                  name="file"
+                  accept=".csv,.tsv,text/csv,text/tab-separated-values"
+                  onChange={(event) => selectUpload(event.target.files?.[0] ?? null)}
+                />
+              </label>
+            </div>
+            <button
+              className="gx-btn gx-btn-primary self-start"
+              type="submit"
+              disabled={busy || !uploadFile}
+            >
               {busy ? 'Checking submission…' : 'Upload result sheet'}
             </button>
           </form>

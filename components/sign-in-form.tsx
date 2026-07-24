@@ -119,7 +119,7 @@ export function SignInForm({
         </form>
         {message ? <p role="status" className="text-[var(--gx-text-muted)]">{message}</p> : null}
         <p className="text-sm text-[var(--gx-text-muted)] mt-4 mb-0">
-          You can <Link href="/practice">preview exercises and download practice data</Link> without signing in.
+          You can <Link href="/#practice">preview exercises and download practice data</Link> without signing in.
         </p>
       </section>
     </div>

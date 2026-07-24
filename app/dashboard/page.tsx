@@ -31,7 +31,7 @@ export default async function DashboardPage() {
           the name used on your certificates.
         </p>
         <div className="flex flex-wrap gap-3 mt-4">
-          <Link href="/practice" className="gx-btn gx-btn-primary">Open practice exercises</Link>
+          <Link href="/#practice" className="gx-btn gx-btn-primary">Open practice exercises</Link>
           <Link href="/challenge" className="gx-btn gx-btn-secondary">View challenge</Link>
         </div>
       </section>

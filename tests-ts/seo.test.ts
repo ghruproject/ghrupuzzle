@@ -21,7 +21,8 @@ test('public metadata uses the canonical production origin and large social card
 test('sitemap contains public practice and guide pages but excludes account routes', () => {
   const urls = sitemap().map((entry) => entry.url);
 
-  assert.ok(urls.includes(new URL('/practice', SITE_URL).toString()));
+  assert.ok(urls.includes(new URL('/assembly/practice', SITE_URL).toString()));
+  assert.ok(!urls.includes(new URL('/practice', SITE_URL).toString()));
   assert.ok(urls.includes(new URL('/guides/installing-tools', SITE_URL).toString()));
   assert.ok(!urls.some((url) => url.includes('/dashboard')));
   assert.ok(!urls.some((url) => url.includes('/sign-in')));

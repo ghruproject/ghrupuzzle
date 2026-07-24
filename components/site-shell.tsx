@@ -52,7 +52,7 @@ function ExerciseLinks({ mobile = false }: { mobile?: boolean }) {
 
   return (
     <>
-      <Link href="/practice" className={className}>
+      <Link href="/#practice" className={className}>
         Practice
       </Link>
       <Link href="/challenge" className={className}>

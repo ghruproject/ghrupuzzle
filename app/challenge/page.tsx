@@ -103,7 +103,7 @@ export default async function ChallengePage() {
             </article>
           ))}
         </div>
-        <Link className="inline-flex mt-5 font-semibold" href="/practice">
+        <Link className="inline-flex mt-5 font-semibold" href="/#practice">
           Prepare with the practice exercises →
         </Link>
       </section>

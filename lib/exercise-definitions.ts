@@ -11,7 +11,7 @@ export const assemblyPracticeDefinition: ExerciseDefinition<ShortReadSample> = {
   title: 'De novo Assembly Practice',
   subtitle: 'Work through paired-end short-read assemblies and report species calls plus QC outcomes.',
   summary:
-    'This practice set benchmarks short-read de novo assembly, contamination detection, and sample-sheet completion with a smaller low-risk cohort.',
+    'Practise short-read de novo assembly, taxonomic identification and read and assembly quality control.',
   mode: 'practice',
   kindLabel: 'Genome Assembly',
   datasetPath: '/practice_assembly_file_details.json',
@@ -59,9 +59,9 @@ export const hybridPracticeDefinition: ExerciseDefinition<HybridAssemblySample> 
   exercise: 'hybrid',
   slug: 'hybrid-assembly-practice',
   title: 'Hybrid Assembly Practice',
-  subtitle: 'Combine simulated short and long reads into polished assemblies with explicit QC.',
+  subtitle: 'Assemble paired short and long reads, identify each organism and assess input and assembly quality.',
   summary:
-    'This exercise adds a long-read track to the standard assembly workflow so participants can benchmark hybrid assemblers, circularisation heuristics, and polishing behaviour.',
+    'Practise long-read assembly, taxonomic identification and read and assembly quality control.',
   mode: 'practice',
   datasetPath: '/practice_hybrid_assembly_file_details.json',
   downloadPrefix: 'practice_hybrid_assembly',
@@ -112,7 +112,7 @@ export const typingPracticeDefinition: ExerciseDefinition<TypingSample> = {
   title: 'Genotyping Practice',
   subtitle: 'Use assembled genomes to recover sequence type, capsule, serotype, and carbapenemase calls.',
   summary:
-    'This exercise focuses on interpreting assembly-based typing outputs cleanly and consistently for a targeted Klebsiella cohort.',
+    'Practise Klebsiella pneumoniae genotyping and recognise assemblies that are unsuitable for analysis.',
   mode: 'practice',
   datasetPath: '/practice_typing_file_details.json',
   downloadPrefix: 'practice_typing',
@@ -160,7 +160,7 @@ export const outbreakPracticeDefinition: ExerciseDefinition<ShortReadSample> = {
   title: 'Outbreak Practice',
   subtitle: 'Build a mapping-based cluster analysis and deliver tree, metadata, and outbreak calls.',
   summary:
-    'This exercise tests read mapping, variant calling, phylogenetic reconstruction, and epidemiological interpretation over a small outbreak-style cohort.',
+    'Practise read QC, phylogenetic reconstruction and label-independent outbreak-cluster assignment.',
   mode: 'practice',
   datasetPath: '/practice_outbreak_file_details.json',
   downloadPrefix: 'practice_outbreak',

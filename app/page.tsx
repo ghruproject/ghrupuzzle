@@ -20,11 +20,13 @@ export default function Home() {
 
       <section id="practice" className="scroll-mt-24">
         <div className="mb-4">
-          <h2 className="text-2xl font-bold text-[var(--gx-text)] mt-0 mb-2">Practice anytime</h2>
+          <h2 className="text-2xl font-bold text-[var(--gx-text)] mt-0 mb-2">
+            Practice with realistic data
+          </h2>
           <p className="text-[var(--gx-text-muted)] max-w-3xl m-0">
-            Preview each task and download available datasets without an account. Use the exercises
-            to develop or benchmark your workflow. Sign in when you are ready to submit a result
-            sheet for assessment and feedback.
+            Use simulated datasets designed to reflect the complexity of real microbial genomics
+            data. Test your team’s proficiency, benchmark your bioinformatics pipelines and
+            identify areas for improvement.
           </p>
         </div>
         <PracticeCards />

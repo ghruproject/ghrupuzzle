@@ -4,7 +4,6 @@ import { SITE_URL } from '@/lib/seo';
 
 const publicRoutes = [
   { path: '/', priority: 1, changeFrequency: 'weekly' as const },
-  { path: '/practice', priority: 0.9, changeFrequency: 'weekly' as const },
   { path: '/challenge', priority: 0.9, changeFrequency: 'daily' as const },
   { path: '/guides', priority: 0.8, changeFrequency: 'monthly' as const },
   { path: '/about', priority: 0.6, changeFrequency: 'monthly' as const },

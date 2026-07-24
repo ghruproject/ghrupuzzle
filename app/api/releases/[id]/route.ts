@@ -1,5 +1,6 @@
 import { getEnv } from '@/lib/cloudflare';
 import { jsonError, optionalUser, requireReleaseAccess } from '@/lib/assessment';
+import { buildParticipantSampleView } from '@/lib/participant-files';
 import type { ScoringPolicy, SubmissionSchema } from '@/lib/release-contract';
 
 export async function GET(
@@ -28,7 +29,7 @@ export async function GET(
       description: string;
       samples: Array<{
         sample_id: string;
-        files: Record<string, { filename: string }>;
+        files: Record<string, { filename: string; size?: number }>;
         metadata?: Record<string, unknown>;
       }>;
     };
@@ -52,19 +53,9 @@ export async function GET(
       .filter((line): line is string => Boolean(line));
     const fileUrl = (filename: string) =>
       `/api/releases/${encodeURIComponent(release.id)}/files/${encodeURIComponent(filename)}`;
-    const samples = manifest.samples.map((sample) => {
-      const row: Record<string, unknown> = {
-        public_name: sample.sample_id,
-        ...sample.metadata,
-      };
-      if (sample.files.assembly) row.FASTA_URL = fileUrl(sample.files.assembly.filename);
-      if (sample.files.read_1) row.R1_URL = fileUrl(sample.files.read_1.filename);
-      if (sample.files.read_2) row.R2_URL = fileUrl(sample.files.read_2.filename);
-      if (sample.files.long_reads) {
-        row.LONG_READ_URL = fileUrl(sample.files.long_reads.filename);
-      }
-      return row;
-    });
+    const samples = manifest.samples.map((sample) =>
+      buildParticipantSampleView(sample, fileUrl),
+    );
     return Response.json({
       samples,
       answer_sheet: { species: [] },
