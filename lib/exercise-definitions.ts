@@ -23,7 +23,8 @@ export const assemblyPracticeDefinition: ExerciseDefinition<ShortReadSample> = {
     'Complete the sample sheet and submit it as UTF-8 CSV or TSV through this portal.',
   ],
   sampleSheetIntro: 'Fill these columns in the returned assembly sheet.',
-  submissionText: 'Use the practice run to settle your pipeline defaults before attempting the timed challenge.',
+  submissionText:
+    'Use this exercise to check that your workflow produces consistent, reviewable outputs across samples of differing quality.',
   answerColumns: [
     { name: 'sample_name', description: 'Public sample identifier used in this exercise.' },
     { name: 'species', description: 'Organism label included in the supplied sheet; verify your independent taxonomic result.' },
@@ -73,7 +74,8 @@ export const hybridPracticeDefinition: ExerciseDefinition<HybridAssemblySample> 
     'Submit the completed sample sheet through this portal.',
   ],
   sampleSheetIntro: 'The hybrid assembly sample sheet is designed to capture both data modalities and assembly provenance.',
-  submissionText: 'Use this practice set to validate that your workflow handles cross-platform evidence cleanly before a timed challenge.',
+  submissionText:
+    'Use this exercise to check that your workflow handles cross-platform evidence and input-quality failures consistently.',
   answerColumns: [
     { name: 'sample_name', description: 'Public sample identifier used in this exercise.' },
     { name: 'species', description: 'Organism label included in the supplied sheet; verify your independent taxonomic result.' },
