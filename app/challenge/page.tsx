@@ -50,7 +50,6 @@ export default async function ChallengePage() {
   const env = await getEnv();
   const schedule = await loadPublicChallengeSchedule(env.DB);
   const featured = schedule.featured;
-  const upcoming = schedule.rounds.filter((round) => round.phase !== 'closed');
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
@@ -69,6 +68,10 @@ export default async function ChallengePage() {
                 {phaseLabel(featured.phase)}
               </span>
             </div>
+            <p className="text-sm text-[var(--gx-text-muted)] mt-0 mb-5">
+              {dateTimeFormatter.format(new Date(featured.opensAt))} –{' '}
+              {dateTimeFormatter.format(new Date(featured.closesAt))}
+            </p>
             <p className="text-lg text-[var(--gx-text-muted)] max-w-3xl mb-6">
               Work through a new time-limited dataset covering the four exercise areas. Your
               submissions are assessed and recorded in your participant dashboard.
@@ -85,35 +88,6 @@ export default async function ChallengePage() {
             No challenge is currently scheduled. The public practice exercises remain available at
             any time.
           </p>
-        )}
-      </section>
-
-      <section className="card mb-8">
-        <h2 className="text-2xl font-bold text-[var(--gx-text)] mt-0 mb-3">
-          Challenge calendar
-        </h2>
-        {upcoming.length ? (
-          <div className="divide-y divide-[var(--gx-border)]">
-            {upcoming.map((round) => (
-              <article
-                key={round.id}
-                className="py-4 first:pt-1 last:pb-1 flex flex-col sm:flex-row sm:items-center gap-3"
-              >
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-[var(--gx-text)] m-0">{round.title}</h3>
-                  <p className="text-sm text-[var(--gx-text-muted)] mt-1 mb-0">
-                    {dateTimeFormatter.format(new Date(round.opensAt))} –{' '}
-                    {dateTimeFormatter.format(new Date(round.closesAt))}
-                  </p>
-                </div>
-                <span className="inline-flex self-start items-center px-3 py-1 rounded-full border border-[var(--gx-border)] bg-[var(--gx-accent-dim)] text-[var(--gx-text-bright)] text-xs font-semibold">
-                  {phaseLabel(round.phase)}
-                </span>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <p className="text-[var(--gx-text-muted)] m-0">No upcoming challenge dates are published.</p>
         )}
       </section>
 
