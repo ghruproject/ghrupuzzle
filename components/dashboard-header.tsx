@@ -77,7 +77,7 @@ export function DashboardHeader({
               Track your practice results and challenge participation.
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-3 lg:flex-nowrap">
             <Link href="/#practice" className="gx-btn gx-btn-primary">
               Open practice exercises
             </Link>
