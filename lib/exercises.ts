@@ -5,6 +5,11 @@ export interface SampleSheetLink {
   url: string;
 }
 
+export interface SupportingFileLink {
+  label: string;
+  url: string;
+}
+
 export interface AnswerSheetSummary {
   filename?: string;
   url?: string;
@@ -39,6 +44,7 @@ export interface ExerciseDataset<TSample> {
   samples: TSample[];
   answer_sheet: AnswerSheetSummary;
   sample_sheet: SampleSheetLink;
+  supporting_files?: SupportingFileLink[];
   release_date?: string;
   references?: ReferenceGenome[];
   notes?: string[];

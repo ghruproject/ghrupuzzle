@@ -322,6 +322,17 @@ export function ExercisePage<TSample extends { public_name: string }>({
                   >
                     Download sample sheet
                   </a>
+                  {dataset?.supporting_files?.map((file) => (
+                    <a
+                      key={file.url}
+                      href={file.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center px-4 py-3 rounded-xl font-bold border border-[var(--gx-border)] text-[var(--gx-text)] hover:text-[var(--gx-text-bright)] bg-transparent transition-colors text-sm"
+                    >
+                      {file.label}
+                    </a>
+                  ))}
                   {!dataset?.access ? (
                     <>
                       <a
