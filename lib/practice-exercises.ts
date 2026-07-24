@@ -8,7 +8,7 @@ export const PRACTICE_EXERCISES = [
   {
     practiceHref: '/hybrid-assembly/practice',
     title: 'Hybrid assembly',
-    dataAvailable: false,
+    dataAvailable: true,
     copy: 'Benchmark hybrid assembly, polishing, circularisation, and assembly completeness.',
   },
   {
