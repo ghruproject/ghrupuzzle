@@ -30,6 +30,7 @@ function roundPhase(round: Round): 'upcoming' | 'open' | 'closed' {
 export function RoundList() {
   const [rounds, setRounds] = useState<Round[]>([]);
   const [message, setMessage] = useState('');
+  const [busyRoundId, setBusyRoundId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/rounds')
@@ -51,22 +52,54 @@ export function RoundList() {
 
   async function signUp(roundId: string) {
     setMessage('');
-    const response = await fetch(`/api/rounds/${roundId}/enrol`, { method: 'POST' });
-    const result = (await response.json()) as { error?: string; openingReminder?: boolean };
-    if (!response.ok) {
-      setMessage(result.error ?? 'Challenge signup failed.');
-      return;
+    setBusyRoundId(roundId);
+    try {
+      const response = await fetch(`/api/rounds/${roundId}/enrol`, { method: 'POST' });
+      const result = (await response.json()) as { error?: string; openingReminder?: boolean };
+      if (!response.ok) {
+        setMessage(result.error ?? 'Challenge signup failed.');
+        return;
+      }
+      setRounds((current) =>
+        current.map((round) =>
+          round.id === roundId ? { ...round, enrolment_status: 'active' } : round,
+        ),
+      );
+      setMessage(
+        result.openingReminder
+          ? 'You are signed up. We will email you when the challenge opens.'
+          : 'You are signed up.',
+      );
+    } catch {
+      setMessage('Challenge signup failed. Please try again.');
+    } finally {
+      setBusyRoundId(null);
     }
-    setRounds((current) =>
-      current.map((round) =>
-        round.id === roundId ? { ...round, enrolment_status: 'active' } : round,
-      ),
-    );
-    setMessage(
-      result.openingReminder
-        ? 'You are signed up. We will email you when the challenge opens.'
-        : 'You are signed up.',
-    );
+  }
+
+  async function cancelSignup(roundId: string) {
+    setMessage('');
+    setBusyRoundId(roundId);
+    try {
+      const response = await fetch(`/api/rounds/${roundId}/enrol`, { method: 'DELETE' });
+      const result = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setMessage(result.error ?? 'Signup cancellation failed.');
+        return;
+      }
+      setRounds((current) =>
+        current.map((round) =>
+          round.id === roundId ? { ...round, enrolment_status: 'withdrawn' } : round,
+        ),
+      );
+      setMessage(
+        'Your signup has been cancelled. You will not receive the opening-day email.',
+      );
+    } catch {
+      setMessage('Signup cancellation failed. Please try again.');
+    } finally {
+      setBusyRoundId(null);
+    }
   }
 
   return (
@@ -74,7 +107,7 @@ export function RoundList() {
       <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-2">Challenge calendar</h2>
       <p className="text-sm text-[var(--gx-text-muted)] mt-0 mb-4">
         Published challenge dates and your signup status. Signing up for an upcoming challenge
-        includes one opening-day email.
+        includes one opening-day email. You can cancel before the challenge opens.
       </p>
       {orderedRounds.length ? (
         <div className="divide-y divide-[var(--gx-border)]">
@@ -101,11 +134,24 @@ export function RoundList() {
                 {signedUp ? (
                   <div className="flex flex-wrap items-center gap-3">
                     <span className="text-sm font-bold text-[var(--gx-success)]">✓ Signed up</span>
+                    {phase === 'upcoming' ? (
+                      <button
+                        className="gx-btn gx-btn-secondary"
+                        disabled={busyRoundId === round.id}
+                        onClick={() => cancelSignup(round.id)}
+                      >
+                        {busyRoundId === round.id ? 'Cancelling…' : 'Cancel signup'}
+                      </button>
+                    ) : null}
                     {phase === 'open' ? <Link href="/challenge" className="font-semibold text-sm">Start challenge →</Link> : null}
                   </div>
                 ) : phase !== 'closed' && registrationOpen ? (
-                  <button className="gx-btn gx-btn-primary" onClick={() => signUp(round.id)}>
-                    Sign up
+                  <button
+                    className="gx-btn gx-btn-primary"
+                    disabled={busyRoundId === round.id}
+                    onClick={() => signUp(round.id)}
+                  >
+                    {busyRoundId === round.id ? 'Signing up…' : 'Sign up'}
                   </button>
                 ) : phase === 'upcoming' ? (
                   <span className="text-sm text-[var(--gx-text-muted)]">Signup opens later</span>

@@ -80,3 +80,77 @@ export async function POST(
     return jsonError(error);
   }
 }
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ id: string }> },
+): Promise<Response> {
+  try {
+    const env = await getEnv();
+    const user = await requireUser(request);
+    const { id } = await context.params;
+    const round = await env.DB.prepare(
+      `SELECT id, slug, opens_at
+         FROM assessment_round
+        WHERE id = ? AND status = 'published'`,
+    )
+      .bind(id)
+      .first<{ id: string; slug: string; opens_at: string }>();
+    if (!round) {
+      return Response.json({ error: 'Challenge signup is not available' }, { status: 404 });
+    }
+    if (new Date() >= new Date(round.opens_at)) {
+      return Response.json(
+        { error: 'Signup can no longer be cancelled after the challenge opens' },
+        { status: 403 },
+      );
+    }
+
+    const enrolment = await env.DB.prepare(
+      `SELECT id
+         FROM enrolment
+        WHERE round_id = ? AND user_id = ? AND status = 'active'`,
+    )
+      .bind(id, user.id)
+      .first<{ id: string }>();
+    if (!enrolment) {
+      return Response.json({ error: 'You are not signed up for this challenge' }, { status: 404 });
+    }
+
+    await env.DB.batch([
+      env.DB.prepare(
+        `UPDATE enrolment
+            SET status = 'withdrawn'
+          WHERE id = ? AND status = 'active'`,
+      ).bind(enrolment.id),
+      env.DB.prepare(
+        `DELETE FROM challenge_notification_subscription
+          WHERE challenge_slug = ? AND email = ? COLLATE NOCASE`,
+      ).bind(round.slug, user.email),
+      env.DB.prepare(
+        `UPDATE invitation
+            SET accepted_by = NULL, accepted_at = NULL
+          WHERE round_id = ? AND accepted_by = ?`,
+      ).bind(id, user.id),
+      env.DB.prepare(
+        `INSERT INTO audit_event
+          (id, actor_user_id, action, target_type, target_id, before_json, after_json)
+         VALUES (?, ?, 'enrolment.withdrawn', 'assessment_round', ?, ?, ?)`,
+      ).bind(
+        crypto.randomUUID(),
+        user.id,
+        id,
+        JSON.stringify({ enrolmentId: enrolment.id, status: 'active', openingReminder: true }),
+        JSON.stringify({ enrolmentId: enrolment.id, status: 'withdrawn', openingReminder: false }),
+      ),
+    ]);
+
+    return Response.json({
+      roundId: id,
+      status: 'withdrawn',
+      openingReminder: false,
+    });
+  } catch (error) {
+    return jsonError(error);
+  }
+}
