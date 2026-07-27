@@ -6,6 +6,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { usePathname, useRouter } from 'next/navigation';
 import { NavBar } from '@genomicx/ui';
 import { authClient } from '@/lib/auth-client';
+import { protectedNavigationContext } from '@/lib/navigation';
 import { ChallengeBanner } from './challenge-banner';
 
 // Bridges react-router-dom navigation (used by @genomicx/ui NavBar) to Next.js router.
@@ -42,10 +43,13 @@ function PuzzleIcon() {
 function ExerciseLinks({ mobile = false }: { mobile?: boolean }) {
   const className = mobile ? 'gx-nav-dropdown-link' : 'gx-nav-link';
   const { data: session, isPending } = authClient.useSession();
-  const [roles, setRoles] = useState<string[]>([]);
+  const pathname = usePathname();
+  const protectedContext = protectedNavigationContext(pathname);
+  const [roles, setRoles] = useState<string[]>(protectedContext.roles);
   const router = useRouter();
 
   useEffect(() => {
+    if (isPending) return;
     if (!session) {
       setRoles([]);
       return;
@@ -57,7 +61,7 @@ function ExerciseLinks({ mobile = false }: { mobile?: boolean }) {
       })
       .then((result) => setRoles(result.roles ?? []))
       .catch(() => setRoles([]));
-  }, [session]);
+  }, [isPending, session]);
 
   async function signOut() {
     await authClient.signOut();
@@ -76,7 +80,7 @@ function ExerciseLinks({ mobile = false }: { mobile?: boolean }) {
       <Link href="/guides" className={className}>
         Guides
       </Link>
-      {!isPending && session ? (
+      {session || (isPending && protectedContext.assumeAuthenticated) ? (
         <>
           <Link href="/dashboard" className={className}>
             Dashboard
