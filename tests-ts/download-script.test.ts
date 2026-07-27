@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   buildBulkDownloadScript,
   createParticipantDownloadToken,
+  participantFileUrl,
   verifyParticipantDownloadToken,
 } from '../lib/download-script';
 import {
@@ -56,6 +57,18 @@ for (const tool of ['curl', 'wget'] as const) {
     assert.match(script, /sha256sum -c checksums\.sha256/);
   });
 }
+
+test('participant file links use the configured public origin and encode tokens', () => {
+  assert.equal(
+    participantFileUrl(
+      'https://ghrupuzzle.vercel.app',
+      'release/id',
+      'sample 1.fastq.gz',
+      '123.signature',
+    ),
+    'https://ghrupuzzle.vercel.app/api/releases/release%2Fid/files/sample%201.fastq.gz?token=123.signature',
+  );
+});
 
 test('download tokens are bound to release, filename and expiry', async () => {
   const now = Date.now();

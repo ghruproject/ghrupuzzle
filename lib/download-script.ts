@@ -65,6 +65,20 @@ export async function verifyParticipantDownloadToken(
   }
 }
 
+export function participantFileUrl(
+  publicOrigin: string,
+  releaseId: string,
+  filename: string,
+  token?: string,
+): string {
+  const url = new URL(
+    `/api/releases/${encodeURIComponent(releaseId)}/files/${encodeURIComponent(filename)}`,
+    publicOrigin,
+  );
+  if (token) url.searchParams.set('token', token);
+  return url.toString();
+}
+
 export function buildBulkDownloadScript(options: {
   tool: 'curl' | 'wget';
   releaseId: string;

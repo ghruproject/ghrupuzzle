@@ -3,6 +3,7 @@ import { jsonError, optionalUser, requireReleaseAccess } from '@/lib/assessment'
 import {
   buildBulkDownloadScript,
   createParticipantDownloadToken,
+  participantFileUrl,
 } from '@/lib/download-script';
 import {
   participantDownloadFiles,
@@ -56,15 +57,13 @@ export async function GET(
       tool,
       releaseId: release.releaseId,
       files,
-      fileUrl: (filename) => {
-        const fileUrl = new URL(
-          `/api/releases/${encodeURIComponent(release.id)}/files/${encodeURIComponent(filename)}`,
-          url.origin,
-        );
-        const token = tokenByFilename.get(filename);
-        if (token) fileUrl.searchParams.set('token', token);
-        return fileUrl.toString();
-      },
+      fileUrl: (filename) =>
+        participantFileUrl(
+          env.BETTER_AUTH_URL,
+          release.id,
+          filename,
+          tokenByFilename.get(filename),
+        ),
     });
     const filename = `${release.releaseId}-${tool}-download.sh`.replace(
       /[^A-Za-z0-9._-]/g,
