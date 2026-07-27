@@ -86,12 +86,84 @@ export function buildBulkDownloadScript(options: {
   fileUrl: (filename: string) => string;
 }): string {
   const directory = options.releaseId.replace(/[^A-Za-z0-9._-]/g, '_');
+  const hasChecksums = options.files.some((file) => file.sha256);
+  const verificationFunction = hasChecksums
+    ? [
+        'verify_sha256() {',
+        '  local file_path="$1"',
+        '  local expected_sha256="$2"',
+        '  if command -v sha256sum >/dev/null 2>&1; then',
+        '    printf \'%s  %s\\n\' "$expected_sha256" "$file_path" | sha256sum -c - >/dev/null 2>&1',
+        '  elif command -v shasum >/dev/null 2>&1; then',
+        '    printf \'%s  %s\\n\' "$expected_sha256" "$file_path" | shasum -a 256 -c - >/dev/null 2>&1',
+        '  else',
+        "    echo 'No SHA-256 checker was found. Install sha256sum or use a system with shasum.' >&2",
+        '    return 1',
+        '  fi',
+        '}',
+        '',
+      ]
+    : [];
+  const downloadFunction =
+    options.tool === 'curl'
+      ? [
+          'download_file() {',
+          '  local output="$1"',
+          '  local url="$2"',
+          '  local expected_sha256="$3"',
+          '  local temporary="${output}.part"',
+          '  local attempt',
+          '  if [ -f "$output" ] && { [ -z "$expected_sha256" ] || verify_sha256 "$output" "$expected_sha256"; }; then',
+          '    echo "Already verified: $output"',
+          '    return 0',
+          '  fi',
+          '  for attempt in 1 2 3 4 5 6; do',
+          '    if curl --fail --location --retry 2 --retry-delay 2 --connect-timeout 30 --output "$temporary" "$url" \\',
+          '      && { [ -z "$expected_sha256" ] || verify_sha256 "$temporary" "$expected_sha256"; }; then',
+          '      mv -f "$temporary" "$output"',
+          '      echo "Downloaded and verified: $output"',
+          '      return 0',
+          '    fi',
+          '    rm -f "$temporary"',
+          '    echo "Retrying $output after a failed or incomplete download (attempt $attempt of 6)." >&2',
+          '    sleep 2',
+          '  done',
+          '  echo "Could not download and verify $output." >&2',
+          '  return 1',
+          '}',
+          '',
+        ]
+      : [
+          'download_file() {',
+          '  local output="$1"',
+          '  local url="$2"',
+          '  local expected_sha256="$3"',
+          '  local temporary="${output}.part"',
+          '  local attempt',
+          '  if [ -f "$output" ] && { [ -z "$expected_sha256" ] || verify_sha256 "$output" "$expected_sha256"; }; then',
+          '    echo "Already verified: $output"',
+          '    return 0',
+          '  fi',
+          '  for attempt in 1 2 3 4 5 6; do',
+          '    if wget --tries=3 --timeout=30 --output-document="$temporary" "$url" \\',
+          '      && { [ -z "$expected_sha256" ] || verify_sha256 "$temporary" "$expected_sha256"; }; then',
+          '      mv -f "$temporary" "$output"',
+          '      echo "Downloaded and verified: $output"',
+          '      return 0',
+          '    fi',
+          '    rm -f "$temporary"',
+          '    echo "Retrying $output after a failed or incomplete download (attempt $attempt of 6)." >&2',
+          '    sleep 2',
+          '  done',
+          '  echo "Could not download and verify $output." >&2',
+          '  return 1',
+          '}',
+          '',
+        ];
   const downloadLines = options.files.map((file) => {
     const output = shellQuote(file.filename);
     const url = shellQuote(options.fileUrl(file.filename));
-    return options.tool === 'curl'
-      ? `curl --fail --location --retry 3 --output ${output} ${url}`
-      : `wget --tries=3 --output-document=${output} ${url}`;
+    return `download_file ${output} ${url} ${shellQuote(file.sha256 ?? '')}`;
   });
   const checksumLines = options.files
     .filter((file) => file.sha256)
@@ -123,6 +195,8 @@ export function buildBulkDownloadScript(options: {
     `mkdir -p ${shellQuote(directory)}`,
     `cd ${shellQuote(directory)}`,
     '',
+    ...verificationFunction,
+    ...downloadFunction,
     ...downloadLines,
     ...checksumBlock,
     '',

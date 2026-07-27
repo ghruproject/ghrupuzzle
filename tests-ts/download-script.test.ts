@@ -57,6 +57,10 @@ for (const tool of ['curl', 'wget'] as const) {
     assert.match(script, /sha256sum -c checksums\.sha256/);
     assert.match(script, /shasum -a 256 -c checksums\.sha256/);
     assert.match(script, /Downloads and SHA-256 verification complete/);
+    assert.match(script, /Downloaded and verified/);
+    assert.match(script, /failed or incomplete download/);
+    assert.match(script, /for attempt in 1 2 3 4 5 6/);
+    assert.match(script, /\.part/);
   });
 }
 
