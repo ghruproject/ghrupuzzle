@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { presignParticipantR2Object } from '../lib/r2-presign';
+import { presignParticipantR2Object, publicR2ObjectUrl } from '../lib/r2-presign';
 
 const signingEnv = {
   PRIVATE_R2_ACCESS_KEY_ID: 'test-access-key',
@@ -21,6 +21,16 @@ test('challenge participant objects receive direct expiring R2 URLs', async () =
   assert.equal(url.searchParams.get('X-Amz-Expires'), '3600');
   assert.equal(url.searchParams.get('X-Amz-Algorithm'), 'AWS4-HMAC-SHA256');
   assert.ok(url.searchParams.get('X-Amz-Signature'));
+});
+
+test('practice object URLs are derived from the configured R2 origin and approved key', () => {
+  assert.equal(
+    publicR2ObjectUrl(
+      'https://public-bucket.r2.dev/',
+      'releases/practice outbreak/files/Sample 1_R1.fastq.gz',
+    ),
+    'https://public-bucket.r2.dev/releases/practice%20outbreak/files/Sample%201_R1.fastq.gz',
+  );
 });
 
 test('private answers and scoring policies cannot be presigned', async () => {

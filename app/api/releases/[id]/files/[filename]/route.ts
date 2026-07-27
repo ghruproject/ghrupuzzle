@@ -4,11 +4,10 @@ import {
 } from '@/lib/assessment';
 import { verifyParticipantDownloadToken } from '@/lib/download-script';
 import {
-  participantFileDetails,
   participantObjectKey,
   type ParticipantManifest,
 } from '@/lib/participant-files';
-import { presignParticipantR2Object } from '@/lib/r2-presign';
+import { presignParticipantR2Object, publicR2ObjectUrl } from '@/lib/r2-presign';
 
 export async function GET(
   request: Request,
@@ -45,7 +44,7 @@ export async function GET(
     }
     const directUrl =
       release.mode === 'practice'
-        ? participantFileDetails(manifest, filename)?.url
+        ? publicR2ObjectUrl(env.PRACTICE_R2_PUBLIC_URL, key)
         : await presignParticipantR2Object(env, key);
     if (!directUrl) return new Response('Direct R2 URL unavailable', { status: 503 });
     return Response.redirect(directUrl, 307);

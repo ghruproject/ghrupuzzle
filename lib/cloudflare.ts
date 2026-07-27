@@ -3,6 +3,7 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 export interface CloudflareEnv {
   DB: D1Database;
   PRACTICE_ASSETS: R2Bucket;
+  PRACTICE_R2_PUBLIC_URL: string;
   PRIVATE_ASSETS: R2Bucket;
   PRIVATE_R2_ACCESS_KEY_ID: string;
   PRIVATE_R2_SECRET_ACCESS_KEY: string;

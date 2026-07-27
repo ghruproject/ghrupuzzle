@@ -8,7 +8,7 @@ import {
   participantObjectKey,
   type ParticipantManifest,
 } from '@/lib/participant-files';
-import { presignParticipantR2Object } from '@/lib/r2-presign';
+import { presignParticipantR2Object, publicR2ObjectUrl } from '@/lib/r2-presign';
 
 export async function GET(
   request: Request,
@@ -46,8 +46,12 @@ export async function GET(
       );
     } else {
       for (const file of files) {
-        if (!file.url) throw new Error(`Practice file has no public R2 URL: ${file.filename}`);
-        directUrlByFilename.set(file.filename, file.url);
+        const key = participantObjectKey(manifest, prefix, file.filename);
+        if (!key) throw new Error(`Participant file is not in the manifest: ${file.filename}`);
+        directUrlByFilename.set(
+          file.filename,
+          publicR2ObjectUrl(env.PRACTICE_R2_PUBLIC_URL, key),
+        );
       }
     }
     const script = buildBulkDownloadScript({

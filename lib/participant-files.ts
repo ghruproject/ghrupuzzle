@@ -86,26 +86,6 @@ export function participantObjectKey(
   return participantFiles.has(filename) ? `${prefix}/files/${filename}` : null;
 }
 
-export function participantFileDetails(
-  manifest: ParticipantManifest,
-  filename: string,
-): ParticipantDownloadFile | null {
-  if (manifest.sample_sheet?.filename === filename) {
-    return {
-      filename,
-      sha256: manifest.sample_sheet.sha256,
-      size: manifest.sample_sheet.size,
-      url: manifest.sample_sheet.url,
-    };
-  }
-  for (const sample of manifest.samples) {
-    for (const file of Object.values(sample.files)) {
-      if (file.filename === filename) return file;
-    }
-  }
-  return null;
-}
-
 export function participantDownloadFiles(
   manifest: ParticipantManifest,
 ): ParticipantDownloadFile[] {

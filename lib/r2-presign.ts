@@ -3,6 +3,14 @@ import type { CloudflareEnv } from './cloudflare';
 
 const DEFAULT_EXPIRY_SECONDS = 12 * 60 * 60;
 
+export function publicR2ObjectUrl(publicOrigin: string, key: string): string {
+  if (!key || key.startsWith('/') || key.includes('..')) {
+    throw new Error('Invalid R2 object key');
+  }
+  const base = publicOrigin.replace(/\/+$/, '');
+  return `${base}/${key.split('/').map(encodeURIComponent).join('/')}`;
+}
+
 function objectUrl(endpoint: string, bucket: string, key: string): URL {
   const base = endpoint.replace(/\/+$/, '');
   const path = [bucket, ...key.split('/')].map(encodeURIComponent).join('/');
