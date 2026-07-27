@@ -1,5 +1,11 @@
 import { getEnv } from '@/lib/cloudflare';
-import { jsonError, optionalUser, requireReleaseAccess } from '@/lib/assessment';
+import {
+  jsonError,
+  optionalUser,
+  requireReleaseAccess,
+  requireSignedChallengeDownloadAccess,
+} from '@/lib/assessment';
+import { verifyParticipantDownloadToken } from '@/lib/download-script';
 import {
   participantObjectKey,
   type ParticipantManifest,
@@ -11,9 +17,22 @@ export async function GET(
 ): Promise<Response> {
   try {
     const env = await getEnv();
-    const user = await optionalUser(request);
     const { id, filename } = await context.params;
-    const release = await requireReleaseAccess(env, id, user?.id ?? null, 'download');
+    const token = new URL(request.url).searchParams.get('token');
+    let release;
+    if (token) {
+      const valid = await verifyParticipantDownloadToken(
+        env.BETTER_AUTH_SECRET,
+        id,
+        filename,
+        token,
+      );
+      if (!valid) return new Response('Download link is invalid or has expired', { status: 403 });
+      release = await requireSignedChallengeDownloadAccess(env, id);
+    } else {
+      const user = await optionalUser(request);
+      release = await requireReleaseAccess(env, id, user?.id ?? null, 'download');
+    }
     const bucket = release.mode === 'practice' ? env.PRACTICE_ASSETS : env.PRIVATE_ASSETS;
     const manifestObject = await bucket.get(release.manifestKey);
     if (!manifestObject) {

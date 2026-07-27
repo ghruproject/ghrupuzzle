@@ -27,6 +27,7 @@ export async function GET(
     const manifest = (await object.json()) as {
       title: string;
       description: string;
+      sample_sheet?: { filename?: string };
       samples: Array<{
         sample_id: string;
         files: Record<string, { filename: string; size?: number }>;
@@ -60,8 +61,12 @@ export async function GET(
       samples,
       answer_sheet: { species: [] },
       sample_sheet: {
-        filename: 'sample_sheet.csv',
-        url: fileUrl('sample_sheet.csv'),
+        filename: manifest.sample_sheet?.filename ?? 'sample_sheet.csv',
+        url: fileUrl(manifest.sample_sheet?.filename ?? 'sample_sheet.csv'),
+      },
+      bulk_download: {
+        curl: `/api/releases/${encodeURIComponent(release.id)}/download-script?tool=curl`,
+        wget: `/api/releases/${encodeURIComponent(release.id)}/download-script?tool=wget`,
       },
       release_date: release.opensAt,
       releaseDefinition: {

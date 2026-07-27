@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const PUBLIC_RELEASE_BASE =
@@ -47,13 +47,10 @@ test('public short-read practice metadata contains no answer values', () => {
   assert.deepEqual(release.answer_sheet.species, []);
 });
 
-test('short-read helper scripts no longer reference the retired R2 bucket', () => {
-  for (const filename of [
-    'public/practice_assembly-curl-download_samples.txt',
-    'public/practice_assembly-wget-download_samples.txt',
-  ]) {
-    const helper = readFileSync(filename, 'utf8');
-    assert.match(helper, /2026-website-assembly-practice/);
-    assert.doesNotMatch(helper, /pub-e661bf7ded744bd79c156d3a4f4323ef/);
+test('obsolete static R2 helper scripts are removed', () => {
+  for (const exercise of ['assembly', 'hybrid', 'outbreak', 'typing']) {
+    for (const tool of ['curl', 'wget']) {
+      assert.equal(existsSync(`public/practice_${exercise}-${tool}-download_samples.txt`), false);
+    }
   }
 });

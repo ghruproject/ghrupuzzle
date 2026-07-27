@@ -1,10 +1,16 @@
 export interface ParticipantManifest {
   samples: Array<{
     sample_id?: string;
-    files: Record<string, { filename: string }>;
+    files: Record<string, { filename: string; sha256?: string; size?: number }>;
     metadata?: Record<string, unknown>;
   }>;
-  sample_sheet?: { filename?: string };
+  sample_sheet?: { filename?: string; sha256?: string; size?: number };
+}
+
+export interface ParticipantDownloadFile {
+  filename: string;
+  sha256?: string;
+  size?: number;
 }
 
 export interface ParticipantFileView {
@@ -77,4 +83,28 @@ export function participantObjectKey(
     ),
   );
   return participantFiles.has(filename) ? `${prefix}/files/${filename}` : null;
+}
+
+export function participantDownloadFiles(
+  manifest: ParticipantManifest,
+): ParticipantDownloadFile[] {
+  const files = new Map<string, ParticipantDownloadFile>();
+  const sampleSheet = manifest.sample_sheet;
+  if (sampleSheet?.filename) {
+    files.set(sampleSheet.filename, {
+      filename: sampleSheet.filename,
+      sha256: sampleSheet.sha256,
+      size: sampleSheet.size,
+    });
+  }
+  for (const sample of manifest.samples) {
+    for (const file of Object.values(sample.files)) {
+      files.set(file.filename, {
+        filename: file.filename,
+        sha256: file.sha256,
+        size: file.size,
+      });
+    }
+  }
+  return [...files.values()];
 }

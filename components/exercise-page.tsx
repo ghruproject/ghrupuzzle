@@ -454,6 +454,29 @@ export function ExercisePage<
 
             {hasSamples ? (
               <div>
+                {dataset?.bulk_download ? (
+                  <div className="rounded-xl border border-[var(--gx-border)] bg-[var(--gx-accent-dim)] p-4 mb-5">
+                    <h3 className="text-base font-bold text-[var(--gx-text)] mt-0 mb-1">
+                      Download all files
+                    </h3>
+                    <p className="text-sm text-[var(--gx-text-muted)] mt-0 mb-3">
+                      Download a ready-to-run shell script for every input file and the result-sheet
+                      template. The script also includes the published SHA-256 checksums.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <a className="gx-btn gx-btn-primary" href={dataset.bulk_download.curl} download>
+                        Download curl script
+                      </a>
+                      <a className="gx-btn gx-btn-secondary" href={dataset.bulk_download.wget} download>
+                        Download wget script
+                      </a>
+                    </div>
+                    <p className="text-xs text-[var(--gx-text-muted)] mt-3 mb-0">
+                      Run with <code>bash downloaded-script.sh</code>. Challenge links are
+                      time-limited and only generated while the challenge is open.
+                    </p>
+                  </div>
+                ) : null}
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse min-w-[640px]">
                     <thead>

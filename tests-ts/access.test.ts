@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { requireReleaseAccess } from '../lib/assessment';
+import {
+  requireReleaseAccess,
+  requireSignedChallengeDownloadAccess,
+} from '../lib/assessment';
 import type { CloudflareEnv } from '../lib/cloudflare';
 import { participantObjectKey, type ParticipantManifest } from '../lib/participant-files';
 
@@ -106,6 +109,32 @@ test('challenge downloads and submissions obey both sides of the configured wind
     );
     assert.equal(release.id, challengeRelease.id);
   }
+});
+
+test('signed challenge downloads remain window-bound without requiring a command-line session', async () => {
+  const release = await requireSignedChallengeDownloadAccess(
+    mockEnv({ ...challengeRelease, enrolment_status: null }),
+    challengeRelease.id,
+    new Date('2026-08-20T12:00:00.000Z'),
+  );
+  assert.equal(release.id, challengeRelease.id);
+
+  await assert.rejects(
+    requireSignedChallengeDownloadAccess(
+      mockEnv(challengeRelease),
+      challengeRelease.id,
+      new Date('2026-08-16T23:59:59.000Z'),
+    ),
+    (error: unknown) => error instanceof Response && error.status === 403,
+  );
+  await assert.rejects(
+    requireSignedChallengeDownloadAccess(
+      mockEnv(practiceRelease),
+      practiceRelease.id,
+      new Date('2026-08-20T12:00:00.000Z'),
+    ),
+    (error: unknown) => error instanceof Response && error.status === 403,
+  );
 });
 
 test('participant file keys come only from the manifest and permit zero-byte objects', () => {

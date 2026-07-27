@@ -48,6 +48,10 @@ export interface ExerciseDataset<TSample> {
   release_date?: string;
   references?: ReferenceGenome[];
   notes?: string[];
+  bulk_download?: {
+    curl: string;
+    wget: string;
+  };
   releaseDefinition?: {
     title: string;
     description: string;

@@ -1,8 +1,0 @@
-#!/bin/bash
-
-wget https://pub-e661bf7ded744bd79c156d3a4f4323ef.r2.dev/Sample_178db692.fasta
-wget https://pub-e661bf7ded744bd79c156d3a4f4323ef.r2.dev/Sample_e236b6bd.fasta
-wget https://pub-e661bf7ded744bd79c156d3a4f4323ef.r2.dev/Sample_1cc0da37.fasta
-wget https://pub-e661bf7ded744bd79c156d3a4f4323ef.r2.dev/Sample_eb789daf.fasta
-wget https://pub-e661bf7ded744bd79c156d3a4f4323ef.r2.dev/Sample_6d8e0e28.fasta
-wget https://pub-e661bf7ded744bd79c156d3a4f4323ef.r2.dev/practice_typing_sample_sheet_eb2f4f0079.csv
