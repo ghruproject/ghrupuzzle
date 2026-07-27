@@ -16,13 +16,24 @@ const manifest: ParticipantManifest = {
     filename: 'sample_sheet.csv',
     sha256: 'sheet-sha',
     size: 120,
+    url: 'https://public-r2.example/releases/practice/sample_sheet.csv',
   },
   samples: [
     {
       sample_id: 'Sample_A',
       files: {
-        read_1: { filename: 'Sample_A_R1.fastq.gz', sha256: 'r1-sha', size: 42 },
-        read_2: { filename: 'Sample_A_R2.fastq.gz', sha256: 'empty-sha', size: 0 },
+        read_1: {
+          filename: 'Sample_A_R1.fastq.gz',
+          sha256: 'r1-sha',
+          size: 42,
+          url: 'https://public-r2.example/releases/practice/files/Sample_A_R1.fastq.gz',
+        },
+        read_2: {
+          filename: 'Sample_A_R2.fastq.gz',
+          sha256: 'empty-sha',
+          size: 0,
+          url: 'https://public-r2.example/releases/practice/files/Sample_A_R2.fastq.gz',
+        },
       },
     },
   ],
@@ -38,6 +49,19 @@ test('participant bulk files include the template and intentional zero-byte inpu
       ['Sample_A_R2.fastq.gz', 0],
     ],
   );
+  assert.equal(files[0].url, manifest.sample_sheet?.url);
+});
+
+test('practice helpers can use direct public R2 object URLs', () => {
+  const files = participantDownloadFiles(manifest);
+  const script = buildBulkDownloadScript({
+    tool: 'curl',
+    releaseId: 'practice-release',
+    files,
+    fileUrl: (file) => file.url ?? '',
+  });
+  assert.match(script, /https:\/\/public-r2\.example\/releases\/practice\/sample_sheet\.csv/);
+  assert.doesNotMatch(script, /\/api\/releases\//);
 });
 
 for (const tool of ['curl', 'wget'] as const) {
@@ -46,7 +70,7 @@ for (const tool of ['curl', 'wget'] as const) {
       tool,
       releaseId: 'practice-release',
       files: participantDownloadFiles(manifest),
-      fileUrl: (filename) => `https://example.test/files/${filename}`,
+      fileUrl: (file) => `https://example.test/files/${file.filename}`,
     });
     assert.match(script, /^#!\/usr\/bin\/env bash\nset -euo pipefail/);
     for (const file of participantDownloadFiles(manifest)) {

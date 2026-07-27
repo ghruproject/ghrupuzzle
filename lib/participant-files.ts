@@ -1,16 +1,17 @@
 export interface ParticipantManifest {
   samples: Array<{
     sample_id?: string;
-    files: Record<string, { filename: string; sha256?: string; size?: number }>;
+    files: Record<string, { filename: string; sha256?: string; size?: number; url?: string }>;
     metadata?: Record<string, unknown>;
   }>;
-  sample_sheet?: { filename?: string; sha256?: string; size?: number };
+  sample_sheet?: { filename?: string; sha256?: string; size?: number; url?: string };
 }
 
 export interface ParticipantDownloadFile {
   filename: string;
   sha256?: string;
   size?: number;
+  url?: string;
 }
 
 export interface ParticipantFileView {
@@ -35,10 +36,10 @@ const PARTICIPANT_FILE_COLUMNS = {
 export function buildParticipantSampleView(
   sample: {
     sample_id: string;
-    files: Record<string, { filename: string; size?: number }>;
+    files: Record<string, { filename: string; size?: number; url?: string }>;
     metadata?: Record<string, unknown>;
   },
-  fileUrl: (filename: string) => string,
+  fileUrl: (file: { filename: string; size?: number; url?: string }) => string,
 ): ParticipantSampleView {
   const row: ParticipantSampleView = {
     public_name: sample.sample_id,
@@ -53,7 +54,7 @@ export function buildParticipantSampleView(
       row.participant_files[columnKey] = null;
       continue;
     }
-    const url = fileUrl(file.filename);
+    const url = fileUrl(file);
     row[columnKey] = url;
     row.participant_files[columnKey] = {
       filename: file.filename,
@@ -85,6 +86,26 @@ export function participantObjectKey(
   return participantFiles.has(filename) ? `${prefix}/files/${filename}` : null;
 }
 
+export function participantFileDetails(
+  manifest: ParticipantManifest,
+  filename: string,
+): ParticipantDownloadFile | null {
+  if (manifest.sample_sheet?.filename === filename) {
+    return {
+      filename,
+      sha256: manifest.sample_sheet.sha256,
+      size: manifest.sample_sheet.size,
+      url: manifest.sample_sheet.url,
+    };
+  }
+  for (const sample of manifest.samples) {
+    for (const file of Object.values(sample.files)) {
+      if (file.filename === filename) return file;
+    }
+  }
+  return null;
+}
+
 export function participantDownloadFiles(
   manifest: ParticipantManifest,
 ): ParticipantDownloadFile[] {
@@ -95,6 +116,7 @@ export function participantDownloadFiles(
       filename: sampleSheet.filename,
       sha256: sampleSheet.sha256,
       size: sampleSheet.size,
+      url: sampleSheet.url,
     });
   }
   for (const sample of manifest.samples) {
@@ -103,6 +125,7 @@ export function participantDownloadFiles(
         filename: file.filename,
         sha256: file.sha256,
         size: file.size,
+        url: file.url,
       });
     }
   }

@@ -1,15 +1,14 @@
 import { getEnv } from '@/lib/cloudflare';
 import {
-  jsonError,
-  optionalUser,
-  requireReleaseAccess,
-  requireSignedChallengeDownloadAccess,
+  jsonError, optionalUser, requireReleaseAccess, requireSignedChallengeDownloadAccess,
 } from '@/lib/assessment';
 import { verifyParticipantDownloadToken } from '@/lib/download-script';
 import {
+  participantFileDetails,
   participantObjectKey,
   type ParticipantManifest,
 } from '@/lib/participant-files';
+import { presignParticipantR2Object } from '@/lib/r2-presign';
 
 export async function GET(
   request: Request,
@@ -44,19 +43,12 @@ export async function GET(
     if (!key) {
       return new Response('File not found', { status: 404 });
     }
-    const object = await bucket.get(key);
-    if (!object) {
-      return new Response('File not found', { status: 404 });
-    }
-    const headers = new Headers();
-    object.writeHttpMetadata(headers);
-    headers.set('etag', object.httpEtag);
-    headers.set('content-disposition', `attachment; filename="${filename}"`);
-    headers.set(
-      'cache-control',
-      release.mode === 'practice' ? 'public, max-age=3600' : 'private, no-store',
-    );
-    return new Response(object.body, { headers });
+    const directUrl =
+      release.mode === 'practice'
+        ? participantFileDetails(manifest, filename)?.url
+        : await presignParticipantR2Object(env, key);
+    if (!directUrl) return new Response('Direct R2 URL unavailable', { status: 503 });
+    return Response.redirect(directUrl, 307);
   } catch (error) {
     return jsonError(error);
   }

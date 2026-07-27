@@ -83,7 +83,7 @@ export function buildBulkDownloadScript(options: {
   tool: 'curl' | 'wget';
   releaseId: string;
   files: ParticipantDownloadFile[];
-  fileUrl: (filename: string) => string;
+  fileUrl: (file: ParticipantDownloadFile) => string;
 }): string {
   const directory = options.releaseId.replace(/[^A-Za-z0-9._-]/g, '_');
   const hasChecksums = options.files.some((file) => file.sha256);
@@ -162,7 +162,7 @@ export function buildBulkDownloadScript(options: {
         ];
   const downloadLines = options.files.map((file) => {
     const output = shellQuote(file.filename);
-    const url = shellQuote(options.fileUrl(file.filename));
+    const url = shellQuote(options.fileUrl(file));
     return `download_file ${output} ${url} ${shellQuote(file.sha256 ?? '')}`;
   });
   const checksumLines = options.files

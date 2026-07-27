@@ -15,7 +15,7 @@ test('zero-byte participant files remain downloadable', () => {
         read_2: { filename: 'Sample_001_R2.fastq.gz', size: 120 },
       },
     },
-    (filename) => `/files/${filename}`,
+    (file) => `/files/${file.filename}`,
   );
 
   assert.equal(sample.R1_URL, '/files/Sample_001_R1.fastq.gz');
@@ -35,7 +35,7 @@ test('deliberately missing participant inputs are represented without a fake dow
         read_2: { filename: 'Sample_002_R2.fastq.gz', size: 120 },
       },
     },
-    (filename) => `/files/${filename}`,
+    (file) => `/files/${file.filename}`,
   );
 
   assert.equal(sample.LONG_READ_URL, '');

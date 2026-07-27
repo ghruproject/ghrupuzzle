@@ -1,7 +1,13 @@
 import { getEnv } from '@/lib/cloudflare';
 import { jsonError, optionalUser, requireReleaseAccess } from '@/lib/assessment';
-import { buildParticipantSampleView } from '@/lib/participant-files';
+import {
+  buildParticipantSampleView,
+  participantDownloadFiles,
+  participantObjectKey,
+  type ParticipantManifest,
+} from '@/lib/participant-files';
 import type { ScoringPolicy, SubmissionSchema } from '@/lib/release-contract';
+import { presignParticipantR2Object } from '@/lib/r2-presign';
 
 export async function GET(
   request: Request,
@@ -24,13 +30,15 @@ export async function GET(
     if (!object || !submissionObject || !instructionsObject || !policyObject) {
       return Response.json({ error: 'Release manifest is unavailable' }, { status: 503 });
     }
-    const manifest = (await object.json()) as {
+    const manifest = (await object.json()) as ParticipantManifest & {
       title: string;
       description: string;
-      sample_sheet?: { filename?: string };
       samples: Array<{
         sample_id: string;
-        files: Record<string, { filename: string; size?: number }>;
+        files: Record<
+          string,
+          { filename: string; size?: number; sha256?: string; url?: string }
+        >;
         metadata?: Record<string, unknown>;
       }>;
     };
@@ -52,17 +60,43 @@ export async function GET(
       .split(/\r?\n/)
       .map((line) => line.match(/^\d+\.\s+(.+)$/)?.[1])
       .filter((line): line is string => Boolean(line));
-    const fileUrl = (filename: string) =>
-      `/api/releases/${encodeURIComponent(release.id)}/files/${encodeURIComponent(filename)}`;
-    const samples = manifest.samples.map((sample) =>
-      buildParticipantSampleView(sample, fileUrl),
-    );
+    const directUrlByFilename = new Map<string, string>();
+    const participantFiles = participantDownloadFiles(manifest);
+    if (release.mode === 'challenge') {
+      await Promise.all(
+        participantFiles.map(async (file) => {
+          const key = participantObjectKey(manifest, prefix, file.filename);
+          if (!key) throw new Error(`Participant file is not in the manifest: ${file.filename}`);
+          directUrlByFilename.set(
+            file.filename,
+            await presignParticipantR2Object(env, key),
+          );
+        }),
+      );
+    } else {
+      for (const file of participantFiles) {
+        if (!file.url) throw new Error(`Practice file has no public R2 URL: ${file.filename}`);
+        directUrlByFilename.set(file.filename, file.url);
+      }
+    }
+    const fileUrl = (file: { filename: string }) => {
+      const directUrl = directUrlByFilename.get(file.filename);
+      if (!directUrl) throw new Error(`No direct R2 URL for ${file.filename}`);
+      return directUrl;
+    };
+    const samples = manifest.samples.map((sample) => {
+      if (!sample.sample_id) throw new Error('Release sample is missing its public identifier');
+      return buildParticipantSampleView(
+        { ...sample, sample_id: sample.sample_id },
+        fileUrl,
+      );
+    });
     return Response.json({
       samples,
       answer_sheet: { species: [] },
       sample_sheet: {
         filename: manifest.sample_sheet?.filename ?? 'sample_sheet.csv',
-        url: fileUrl(manifest.sample_sheet?.filename ?? 'sample_sheet.csv'),
+        url: fileUrl({ filename: manifest.sample_sheet?.filename ?? 'sample_sheet.csv' }),
       },
       bulk_download: {
         curl: `/api/releases/${encodeURIComponent(release.id)}/download-script?tool=curl`,

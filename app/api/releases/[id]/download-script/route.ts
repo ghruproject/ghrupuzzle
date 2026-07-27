@@ -2,13 +2,13 @@ import { getEnv } from '@/lib/cloudflare';
 import { jsonError, optionalUser, requireReleaseAccess } from '@/lib/assessment';
 import {
   buildBulkDownloadScript,
-  createParticipantDownloadToken,
-  participantFileUrl,
 } from '@/lib/download-script';
 import {
   participantDownloadFiles,
+  participantObjectKey,
   type ParticipantManifest,
 } from '@/lib/participant-files';
+import { presignParticipantR2Object } from '@/lib/r2-presign';
 
 export async function GET(
   request: Request,
@@ -31,39 +31,34 @@ export async function GET(
     }
     const manifest = (await manifestObject.json()) as ParticipantManifest;
     const files = participantDownloadFiles(manifest);
-    const expiresAt = Math.min(
-      Date.now() + 60 * 60 * 1000,
-      release.closesAt
-        ? new Date(release.closesAt).getTime() + release.graceSeconds * 1000
-        : Number.MAX_SAFE_INTEGER,
-    );
-    const tokenByFilename = new Map<string, string>();
+    const prefix = release.manifestKey.slice(0, release.manifestKey.lastIndexOf('/'));
+    const directUrlByFilename = new Map<string, string>();
     if (release.mode === 'challenge') {
       await Promise.all(
         files.map(async (file) => {
-          tokenByFilename.set(
+          const key = participantObjectKey(manifest, prefix, file.filename);
+          if (!key) throw new Error(`Participant file is not in the manifest: ${file.filename}`);
+          directUrlByFilename.set(
             file.filename,
-            await createParticipantDownloadToken(
-              env.BETTER_AUTH_SECRET,
-              release.id,
-              file.filename,
-              expiresAt,
-            ),
+            await presignParticipantR2Object(env, key),
           );
         }),
       );
+    } else {
+      for (const file of files) {
+        if (!file.url) throw new Error(`Practice file has no public R2 URL: ${file.filename}`);
+        directUrlByFilename.set(file.filename, file.url);
+      }
     }
     const script = buildBulkDownloadScript({
       tool,
       releaseId: release.releaseId,
       files,
-      fileUrl: (filename) =>
-        participantFileUrl(
-          env.BETTER_AUTH_URL,
-          release.id,
-          filename,
-          tokenByFilename.get(filename),
-        ),
+      fileUrl: (file) => {
+        const directUrl = directUrlByFilename.get(file.filename);
+        if (!directUrl) throw new Error(`No direct R2 URL for ${file.filename}`);
+        return directUrl;
+      },
     });
     const filename = `${release.releaseId}-${tool}-download.sh`.replace(
       /[^A-Za-z0-9._-]/g,

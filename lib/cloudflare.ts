@@ -4,6 +4,10 @@ export interface CloudflareEnv {
   DB: D1Database;
   PRACTICE_ASSETS: R2Bucket;
   PRIVATE_ASSETS: R2Bucket;
+  PRIVATE_R2_ACCESS_KEY_ID: string;
+  PRIVATE_R2_SECRET_ACCESS_KEY: string;
+  PRIVATE_R2_ENDPOINT_URL: string;
+  PRIVATE_R2_BUCKET_NAME: string;
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
   GOOGLE_CLIENT_ID?: string;
