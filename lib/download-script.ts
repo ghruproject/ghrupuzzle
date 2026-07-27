@@ -102,7 +102,17 @@ export function buildBulkDownloadScript(options: {
         "cat > checksums.sha256 <<'GHRUPUZZLES_CHECKSUMS'",
         ...checksumLines,
         'GHRUPUZZLES_CHECKSUMS',
-        "echo 'Downloads complete. Verify with: sha256sum -c checksums.sha256'",
+        '',
+        'if command -v sha256sum >/dev/null 2>&1; then',
+        '  sha256sum -c checksums.sha256',
+        'elif command -v shasum >/dev/null 2>&1; then',
+        '  shasum -a 256 -c checksums.sha256',
+        'else',
+        "  echo 'Downloads complete, but no SHA-256 checker was found.' >&2",
+        "  echo 'Install sha256sum or run: shasum -a 256 -c checksums.sha256' >&2",
+        '  exit 1',
+        'fi',
+        "echo 'Downloads and SHA-256 verification complete.'",
       ]
     : ['', "echo 'Downloads complete.'"];
 

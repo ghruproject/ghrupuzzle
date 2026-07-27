@@ -55,6 +55,8 @@ for (const tool of ['curl', 'wget'] as const) {
     }
     assert.doesNotMatch(script, /answer_key|scoring_policy|private\//);
     assert.match(script, /sha256sum -c checksums\.sha256/);
+    assert.match(script, /shasum -a 256 -c checksums\.sha256/);
+    assert.match(script, /Downloads and SHA-256 verification complete/);
   });
 }
 
