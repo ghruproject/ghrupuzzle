@@ -33,6 +33,8 @@ const PARTICIPANT_FILE_COLUMNS = {
   long_reads: 'LONG_READ_URL',
 } as const;
 
+export const DEFAULT_SAMPLE_SHEET_FILENAME = 'sample_sheet.csv';
+
 export function buildParticipantSampleView(
   sample: {
     sample_id: string;
@@ -74,7 +76,7 @@ export function participantObjectKey(
   if (!filename || filename !== filename.split(/[\\/]/).pop()) {
     return null;
   }
-  const sampleSheet = manifest.sample_sheet?.filename;
+  const sampleSheet = manifest.sample_sheet?.filename ?? DEFAULT_SAMPLE_SHEET_FILENAME;
   if (sampleSheet === filename) {
     return `${prefix}/${filename}`;
   }
@@ -91,14 +93,13 @@ export function participantDownloadFiles(
 ): ParticipantDownloadFile[] {
   const files = new Map<string, ParticipantDownloadFile>();
   const sampleSheet = manifest.sample_sheet;
-  if (sampleSheet?.filename) {
-    files.set(sampleSheet.filename, {
-      filename: sampleSheet.filename,
-      sha256: sampleSheet.sha256,
-      size: sampleSheet.size,
-      url: sampleSheet.url,
-    });
-  }
+  const sampleSheetFilename = sampleSheet?.filename ?? DEFAULT_SAMPLE_SHEET_FILENAME;
+  files.set(sampleSheetFilename, {
+    filename: sampleSheetFilename,
+    sha256: sampleSheet?.sha256,
+    size: sampleSheet?.size,
+    url: sampleSheet?.url,
+  });
   for (const sample of manifest.samples) {
     for (const file of Object.values(sample.files)) {
       files.set(file.filename, {

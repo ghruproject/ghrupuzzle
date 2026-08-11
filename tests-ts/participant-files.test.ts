@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildParticipantSampleView,
+  participantDownloadFiles,
   participantObjectKey,
   type ParticipantManifest,
 } from '../lib/participant-files';
@@ -56,5 +57,37 @@ test('participant download allow-list accepts zero-byte manifest entries', () =>
   assert.equal(
     participantObjectKey(manifest, 'releases/example/assembly/practice', 'empty.fastq.gz'),
     'releases/example/assembly/practice/files/empty.fastq.gz',
+  );
+});
+
+test('schema 2.1 releases use the canonical sample sheet when the manifest omits its pointer', () => {
+  const manifest: ParticipantManifest = {
+    samples: [
+      {
+        files: {
+          assembly: { filename: 'Sample_001.fasta', size: 123 },
+        },
+      },
+    ],
+  };
+  const prefix = 'releases/challenge-2-typing-v2/typing/challenge';
+
+  assert.deepEqual(participantDownloadFiles(manifest), [
+    {
+      filename: 'sample_sheet.csv',
+      sha256: undefined,
+      size: undefined,
+      url: undefined,
+    },
+    {
+      filename: 'Sample_001.fasta',
+      sha256: undefined,
+      size: 123,
+      url: undefined,
+    },
+  ]);
+  assert.equal(
+    participantObjectKey(manifest, prefix, 'sample_sheet.csv'),
+    `${prefix}/sample_sheet.csv`,
   );
 });
