@@ -20,6 +20,7 @@ export interface ReleaseAccess {
   closesAt: string | null;
   graceSeconds: number;
   schemaVersion: string;
+  administratorPreview: boolean;
 }
 
 export async function optionalUser(request: Request): Promise<AuthenticatedUser | null> {
@@ -74,7 +75,7 @@ export async function hasAdministratorAccess(
 export async function requireReleaseAccess(
   env: CloudflareEnv,
   releaseId: string,
-  userId: string | null,
+  user: AuthenticatedUser | null,
   purpose: 'download' | 'submit',
   now = new Date(),
 ): Promise<ReleaseAccess> {
@@ -88,7 +89,7 @@ export async function requireReleaseAccess(
        LEFT JOIN enrolment e ON e.round_id = d.round_id AND e.user_id = ?
       WHERE d.id = ? AND d.published_at IS NOT NULL`,
   )
-    .bind(userId, releaseId)
+    .bind(user?.id ?? null, releaseId)
     .first<Record<string, unknown>>();
   if (!release) {
     throw new Response('Release not found', { status: 404 });
@@ -97,28 +98,35 @@ export async function requireReleaseAccess(
   if (!isSupportedReleaseSchemaVersion(release.schema_version)) {
     throw new Response('Release schema is not supported', { status: 409 });
   }
+  const administratorPreview =
+    mode === 'challenge'
+    && purpose === 'download'
+    && Boolean(user)
+    && await hasAdministratorAccess(env.DB, user?.email ?? '');
   if (mode === 'challenge') {
-    if (!userId) {
+    if (!user) {
       throw new Response('Authentication required', { status: 401 });
     }
-    if (release.enrolment_status !== 'active') {
-      throw new Response('Challenge signup required', { status: 403 });
-    }
-    const opensAt = new Date(String(release.opens_at));
-    const closesAt = new Date(String(release.closes_at));
-    const effectiveClose = new Date(
-      closesAt.getTime() + Number(release.grace_seconds ?? 0) * 1000,
-    );
-    if (now < opensAt) {
-      throw new Response('Challenge has not opened', { status: 403 });
-    }
-    if (now > effectiveClose) {
-      throw new Response(
-        purpose === 'submit'
-          ? 'Challenge submission window has closed'
-          : 'Challenge download window has closed',
-        { status: 403 },
+    if (!administratorPreview) {
+      if (release.enrolment_status !== 'active') {
+        throw new Response('Challenge signup required', { status: 403 });
+      }
+      const opensAt = new Date(String(release.opens_at));
+      const closesAt = new Date(String(release.closes_at));
+      const effectiveClose = new Date(
+        closesAt.getTime() + Number(release.grace_seconds ?? 0) * 1000,
       );
+      if (now < opensAt) {
+        throw new Response('Challenge has not opened', { status: 403 });
+      }
+      if (now > effectiveClose) {
+        throw new Response(
+          purpose === 'submit'
+            ? 'Challenge submission window has closed'
+            : 'Challenge download window has closed',
+          { status: 403 },
+        );
+      }
     }
   }
   return {
@@ -133,6 +141,7 @@ export async function requireReleaseAccess(
     closesAt: release.closes_at ? String(release.closes_at) : null,
     graceSeconds: Number(release.grace_seconds ?? 0),
     schemaVersion: String(release.schema_version),
+    administratorPreview,
   };
 }
 
@@ -181,6 +190,7 @@ export async function requireSignedChallengeDownloadAccess(
     closesAt: release.closes_at ? String(release.closes_at) : null,
     graceSeconds: Number(release.grace_seconds ?? 0),
     schemaVersion: String(release.schema_version),
+    administratorPreview: false,
   };
 }
 

@@ -1,5 +1,5 @@
 import { getEnv } from '@/lib/cloudflare';
-import { jsonError, optionalUser } from '@/lib/assessment';
+import { hasAdministratorAccess, jsonError, optionalUser } from '@/lib/assessment';
 
 const EXERCISES = new Set(['typing', 'assembly', 'hybrid', 'outbreak']);
 const MODES = new Set(['practice', 'challenge']);
@@ -17,6 +17,9 @@ export async function GET(request: Request): Promise<Response> {
     if (mode === 'challenge' && !user) {
       return new Response('Authentication required', { status: 401 });
     }
+    const administrator = user
+      ? await hasAdministratorAccess(env.DB, user.email)
+      : false;
     const rows = await env.DB.prepare(
       `SELECT d.id, d.release_id, d.exercise, d.mode, r.opens_at, r.closes_at
          FROM dataset_release d
@@ -25,6 +28,7 @@ export async function GET(request: Request): Promise<Response> {
         WHERE d.exercise = ? AND d.mode = ? AND d.published_at IS NOT NULL
           AND (
             d.mode = 'practice'
+            OR ? = 1
             OR (
               e.status = 'active'
               AND datetime('now') >= datetime(r.opens_at)
@@ -33,7 +37,7 @@ export async function GET(request: Request): Promise<Response> {
           )
         ORDER BY d.published_at DESC`,
     )
-      .bind(user?.id ?? null, exercise, mode)
+      .bind(user?.id ?? null, exercise, mode, administrator ? 1 : 0)
       .all<Record<string, unknown>>();
     return Response.json({
       releases: rows.results.map((row) => ({

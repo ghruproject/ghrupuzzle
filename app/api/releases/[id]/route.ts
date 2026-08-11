@@ -17,7 +17,7 @@ export async function GET(
     const env = await getEnv();
     const user = await optionalUser(request);
     const { id } = await context.params;
-    const release = await requireReleaseAccess(env, id, user?.id ?? null, 'download');
+    const release = await requireReleaseAccess(env, id, user, 'download');
     const bucket = release.mode === 'practice' ? env.PRACTICE_ASSETS : env.PRIVATE_ASSETS;
     const prefix = release.manifestKey.slice(0, release.manifestKey.lastIndexOf('/'));
     const policyKey = release.answerKey.replace(/answer_key\.json$/, 'scoring_policy.json');
@@ -122,6 +122,7 @@ export async function GET(
         mode: release.mode,
         opensAt: release.opensAt,
         closesAt: release.closesAt,
+        administratorPreview: release.administratorPreview,
       },
     });
   } catch (error) {

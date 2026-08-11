@@ -7,12 +7,21 @@ import {
 import type { CloudflareEnv } from '../lib/cloudflare';
 import { participantObjectKey, type ParticipantManifest } from '../lib/participant-files';
 
-function mockEnv(row: Record<string, unknown>): CloudflareEnv {
+function mockEnv(
+  row: Record<string, unknown>,
+  administratorEmails: string[] = [],
+): CloudflareEnv {
   return {
     DB: {
-      prepare: () => ({
-        bind: () => ({
-          first: async () => row,
+      prepare: (query: string) => ({
+        bind: (...values: unknown[]) => ({
+          first: async () => {
+            if (query.includes('administrator_email')) {
+              const email = String(values[0]).toLowerCase();
+              return administratorEmails.includes(email) ? { email } : null;
+            }
+            return row;
+          },
         }),
       }),
     },
@@ -45,6 +54,18 @@ const challengeRelease = {
   enrolment_status: 'active',
 };
 
+const participant = {
+  id: 'participant-id',
+  name: 'Participant',
+  email: 'participant@example.org',
+};
+
+const administrator = {
+  id: 'administrator-id',
+  name: 'Administrator',
+  email: 'admin@example.org',
+};
+
 test('practice release retrieval and download access remain public', async () => {
   const release = await requireReleaseAccess(
     mockEnv(practiceRelease),
@@ -70,7 +91,7 @@ test('challenge access requires authentication and active enrolment', async () =
     requireReleaseAccess(
       mockEnv({ ...challengeRelease, enrolment_status: null }),
       challengeRelease.id,
-      'participant-id',
+      participant,
       'download',
       new Date('2026-08-20T12:00:00.000Z'),
     ),
@@ -84,7 +105,7 @@ test('challenge downloads and submissions obey both sides of the configured wind
       requireReleaseAccess(
         mockEnv(challengeRelease),
         challengeRelease.id,
-        'participant-id',
+        participant,
         purpose,
         new Date('2026-08-16T23:59:59.000Z'),
       ),
@@ -94,7 +115,7 @@ test('challenge downloads and submissions obey both sides of the configured wind
       requireReleaseAccess(
         mockEnv(challengeRelease),
         challengeRelease.id,
-        'participant-id',
+        participant,
         purpose,
         new Date('2026-09-01T00:00:00.000Z'),
       ),
@@ -103,12 +124,43 @@ test('challenge downloads and submissions obey both sides of the configured wind
     const release = await requireReleaseAccess(
       mockEnv(challengeRelease),
       challengeRelease.id,
-      'participant-id',
+      participant,
       purpose,
       new Date('2026-08-20T12:00:00.000Z'),
     );
     assert.equal(release.id, challengeRelease.id);
   }
+});
+
+test('administrators can preview challenge downloads outside the participant window', async () => {
+  const release = await requireReleaseAccess(
+    mockEnv(
+      { ...challengeRelease, enrolment_status: null },
+      [administrator.email],
+    ),
+    challengeRelease.id,
+    administrator,
+    'download',
+    new Date('2026-08-01T12:00:00.000Z'),
+  );
+  assert.equal(release.id, challengeRelease.id);
+  assert.equal(release.administratorPreview, true);
+});
+
+test('administrator preview does not bypass challenge submission locks', async () => {
+  await assert.rejects(
+    requireReleaseAccess(
+      mockEnv(
+        { ...challengeRelease, enrolment_status: null },
+        [administrator.email],
+      ),
+      challengeRelease.id,
+      administrator,
+      'submit',
+      new Date('2026-08-01T12:00:00.000Z'),
+    ),
+    (error: unknown) => error instanceof Response && error.status === 403,
+  );
 });
 
 test('signed challenge downloads remain window-bound without requiring a command-line session', async () => {

@@ -63,6 +63,7 @@ export interface ExerciseDataset<TSample> {
     mode: ExerciseMode;
     opensAt?: string | null;
     closesAt?: string | null;
+    administratorPreview?: boolean;
   };
 }
 

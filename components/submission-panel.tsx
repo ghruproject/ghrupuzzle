@@ -89,10 +89,12 @@ export function SubmissionPanel({
   exercise,
   mode,
   datasetAvailable = true,
+  administratorPreview = false,
 }: {
   exercise: 'typing' | 'assembly' | 'hybrid' | 'outbreak';
   mode: ExerciseMode;
   datasetAvailable?: boolean;
+  administratorPreview?: boolean;
 }) {
   const [release, setRelease] = useState<AvailableRelease | null>(null);
   const [details, setDetails] = useState<ReleaseDetails | null>(null);
@@ -110,7 +112,7 @@ export function SubmissionPanel({
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!datasetAvailable) return;
+    if (!datasetAvailable || administratorPreview) return;
     let active = true;
     Promise.all([
       fetch(`/api/releases?exercise=${exercise}&mode=${mode}`),
@@ -158,7 +160,7 @@ export function SubmissionPanel({
     return () => {
       active = false;
     };
-  }, [datasetAvailable, exercise, mode]);
+  }, [administratorPreview, datasetAvailable, exercise, mode]);
 
   const fields = details?.releaseDefinition.fields ?? [];
   const sampleIds = useMemo(
@@ -306,6 +308,11 @@ export function SubmissionPanel({
       {!datasetAvailable ? (
         <p className="text-[var(--gx-text-muted)]">
           Submission will open when this practice dataset and sample sheet are published.
+        </p>
+      ) : administratorPreview ? (
+        <p className="text-[var(--gx-text-muted)]">
+          Participant submissions remain locked during administrator preview. They will open with
+          the configured challenge window.
         </p>
       ) : authRequired ? (
         <div className="flex flex-col gap-3">

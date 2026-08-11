@@ -23,7 +23,7 @@ export async function GET(
     if (tool !== 'curl' && tool !== 'wget') {
       return Response.json({ error: 'Choose either curl or wget' }, { status: 400 });
     }
-    const release = await requireReleaseAccess(env, id, user?.id ?? null, 'download');
+    const release = await requireReleaseAccess(env, id, user, 'download');
     const bucket = release.mode === 'practice' ? env.PRACTICE_ASSETS : env.PRIVATE_ASSETS;
     const manifestObject = await bucket.get(release.manifestKey);
     if (!manifestObject) {

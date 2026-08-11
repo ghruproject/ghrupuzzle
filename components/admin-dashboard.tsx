@@ -40,6 +40,13 @@ const DATE_FORMAT = new Intl.DateTimeFormat('en-GB', {
   minute: '2-digit',
 });
 
+const EXERCISE_PATHS = {
+  assembly: '/assembly',
+  hybrid: '/hybrid-assembly',
+  typing: '/typing',
+  outbreak: '/outbreak',
+} as const;
+
 function formatDate(value: string | number | null): string {
   if (!value) return '—';
   const date = typeof value === 'number' && value < 10_000_000_000
@@ -484,6 +491,7 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
                     <th className="border-b border-[var(--gx-border)] px-3 py-2">Mode</th>
                     <th className="border-b border-[var(--gx-border)] px-3 py-2">Schema</th>
                     <th className="border-b border-[var(--gx-border)] px-3 py-2">Submissions</th>
+                    <th className="border-b border-[var(--gx-border)] px-3 py-2">Page</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -497,6 +505,14 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
                       <td className="border-b border-[var(--gx-border)] px-3 py-3"><Badge tone={release.mode === 'challenge' ? 'accent' : 'neutral'}>{release.mode}</Badge></td>
                       <td className="border-b border-[var(--gx-border)] px-3 py-3">{release.schema_version}</td>
                       <td className="border-b border-[var(--gx-border)] px-3 py-3">{count(release.submissions)}</td>
+                      <td className="border-b border-[var(--gx-border)] px-3 py-3">
+                        <Link
+                          className="font-semibold"
+                          href={`${EXERCISE_PATHS[release.exercise]}${release.mode === 'practice' ? '/practice' : ''}`}
+                        >
+                          {release.mode === 'challenge' ? 'Preview' : 'Open'} →
+                        </Link>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

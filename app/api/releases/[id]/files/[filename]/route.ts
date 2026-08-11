@@ -29,7 +29,7 @@ export async function GET(
       release = await requireSignedChallengeDownloadAccess(env, id);
     } else {
       const user = await optionalUser(request);
-      release = await requireReleaseAccess(env, id, user?.id ?? null, 'download');
+      release = await requireReleaseAccess(env, id, user, 'download');
     }
     const bucket = release.mode === 'practice' ? env.PRACTICE_ASSETS : env.PRIVATE_ASSETS;
     const manifestObject = await bucket.get(release.manifestKey);

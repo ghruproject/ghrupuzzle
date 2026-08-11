@@ -32,7 +32,7 @@ export async function POST(request: Request): Promise<Response> {
         { status: 400 },
       );
     }
-    const release = await requireReleaseAccess(env, releaseId, user.id, 'submit');
+    const release = await requireReleaseAccess(env, releaseId, user, 'submit');
     const recent = await env.DB.prepare(
       `SELECT COUNT(*) AS count FROM submission
         WHERE user_id = ? AND submitted_at >= datetime('now', '-10 minutes')`,

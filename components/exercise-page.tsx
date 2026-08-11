@@ -134,9 +134,10 @@ export function ExercisePage<
   }, [definition.mode]);
 
   const hasSamples = (dataset?.samples.length ?? 0) > 0;
+  const administratorPreview = Boolean(dataset?.access?.administratorPreview);
   const releaseReady = useMemo(
-    () => hasSamples && isReleased(dataset?.release_date),
-    [dataset?.release_date, hasSamples],
+    () => hasSamples && (administratorPreview || isReleased(dataset?.release_date)),
+    [administratorPreview, dataset?.release_date, hasSamples],
   );
   const hasSampleSheet = Boolean(dataset?.sample_sheet?.url);
   const canDownload = hasSamples && hasSampleSheet;
@@ -229,6 +230,18 @@ export function ExercisePage<
       ) : null}
       {error ? (
         <div className="rounded-2xl border border-red-400/40 bg-[var(--gx-surface)] p-6 mb-6">{error}</div>
+      ) : null}
+
+      {!loading && !error && definition.mode === 'challenge' && administratorPreview ? (
+        <div className="rounded-2xl border border-[var(--gx-accent)] bg-[var(--gx-accent-dim)] p-5 mb-6">
+          <h2 className="text-lg font-bold text-[var(--gx-text)] mt-0 mb-2">
+            Administrator preview
+          </h2>
+          <p className="text-sm text-[var(--gx-text-muted)] m-0">
+            You can inspect and download this challenge release before it opens. Participant access
+            and submissions remain locked until the configured challenge window.
+          </p>
+        </div>
       ) : null}
 
       {/* Locked challenge */}
@@ -577,6 +590,7 @@ export function ExercisePage<
             exercise={definition.exercise}
             mode={definition.mode}
             datasetAvailable={canDownload}
+            administratorPreview={administratorPreview}
           />
         </div>
       ) : null}
