@@ -13,6 +13,7 @@ export function SignInForm({
   microsoftEnabled: boolean;
 }) {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [returnTo, setReturnTo] = useState('/dashboard');
@@ -23,6 +24,24 @@ export function SignInForm({
       setReturnTo(candidate);
     }
   }, []);
+
+  async function passwordSignIn(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setMessage('');
+    const result = await authClient.signIn.email({
+      email,
+      password,
+      callbackURL: returnTo,
+      rememberMe: true,
+    });
+    if (result.error) {
+      setBusy(false);
+      setMessage('The email address or password is incorrect.');
+      return;
+    }
+    window.location.assign(returnTo);
+  }
 
   async function emailSignIn(event: FormEvent) {
     event.preventDefault();
@@ -102,10 +121,10 @@ export function SignInForm({
           </div>
         ) : null}
 
-        <form onSubmit={emailSignIn} className="flex flex-col gap-4">
-          <label className="label" htmlFor="email">Email address</label>
+        <form onSubmit={passwordSignIn} className="flex flex-col gap-4">
+          <label className="label" htmlFor="password-email">Email address</label>
           <input
-            id="email"
+            id="password-email"
             className="gx-input w-full"
             type="email"
             autoComplete="email"
@@ -113,10 +132,46 @@ export function SignInForm({
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
+          <label className="label" htmlFor="password">Password</label>
+          <input
+            id="password"
+            className="gx-input w-full"
+            type="password"
+            autoComplete="current-password"
+            required
+            minLength={12}
+            maxLength={128}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
           <button className="gx-btn gx-btn-primary w-full" disabled={busy} type="submit">
-            {busy ? 'Sending secure link…' : 'Email me a sign-in link'}
+            {busy ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+        <p className="mb-0 mt-3 text-sm text-[var(--gx-text-muted)]">
+          Setting or resetting your password? Ask an administrator for a one-time setup code,
+          then <Link href="/set-password">use the password setup page</Link>.
+        </p>
+        <details className="mt-5 border-t border-[var(--gx-border)] pt-5">
+          <summary className="cursor-pointer text-sm font-bold text-[var(--gx-text)]">
+            Use an emailed sign-in link instead
+          </summary>
+          <form onSubmit={emailSignIn} className="mt-4 flex flex-col gap-4">
+            <label className="label" htmlFor="magic-email">Email address</label>
+            <input
+              id="magic-email"
+              className="gx-input w-full"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+            <button className="gx-btn gx-btn-secondary w-full" disabled={busy} type="submit">
+              {busy ? 'Sending secure link…' : 'Email me a sign-in link'}
+            </button>
+          </form>
+        </details>
         {message ? <p role="status" className="text-[var(--gx-text-muted)]">{message}</p> : null}
         <p className="text-sm text-[var(--gx-text-muted)] mt-4 mb-0">
           You can <Link href="/#practice">preview exercises and download practice data</Link> without signing in.

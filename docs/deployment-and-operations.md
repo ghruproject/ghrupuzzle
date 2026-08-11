@@ -74,6 +74,20 @@ variable when sign-in should be restricted to one tenant. If it is omitted,
 the application uses `common`, allowing personal Microsoft accounts and
 accounts from any Entra tenant supported by the app registration.
 
+### Password fallback
+
+Email-and-password sign-in is enabled for existing accounts, but public
+password registration is disabled. An administrator creates a one-time code
+from the participant table in `/admin` and shares the displayed setup page,
+email address and code through a private channel. The participant uses
+`/set-password` to choose a password.
+
+Setup codes expire after 24 hours, are invalidated when a replacement is
+created, and are stored in D1 only as SHA-256 hashes. Using a code invalidates
+the participant's other setup codes and existing sessions. Passwords are
+hashed by Better Auth and are never available to administrators. The same
+workflow provides password recovery without relying on email delivery.
+
 ## Challenge opening reminders
 
 The public challenge page stores explicit one-off reminder registrations in

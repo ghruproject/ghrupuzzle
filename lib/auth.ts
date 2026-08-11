@@ -31,6 +31,13 @@ export async function createAuth() {
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
     database: env.DB,
+    emailAndPassword: {
+      enabled: true,
+      disableSignUp: true,
+      minPasswordLength: 12,
+      maxPasswordLength: 128,
+      revokeSessionsOnPasswordReset: true,
+    },
     rateLimit: {
       enabled: true,
       storage: 'database',
@@ -38,6 +45,7 @@ export async function createAuth() {
       max: 100,
       customRules: {
         '/sign-in/magic-link': { window: 60, max: 5 },
+        '/sign-in/email': { window: 60, max: 5 },
         '/sign-in/social': { window: 60, max: 10 },
       },
     },

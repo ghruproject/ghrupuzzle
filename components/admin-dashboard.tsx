@@ -13,6 +13,7 @@ import type {
   AdminCertificate,
   AdminCertificateCandidate,
   AdminOverview,
+  AdminParticipant,
   AdminRound,
 } from '@/lib/admin';
 import {
@@ -30,6 +31,14 @@ type Dialog =
   | { type: 'revoke'; certificate: AdminCertificate }
   | { type: 'add-administrator' }
   | { type: 'remove-administrator'; email: string }
+  | { type: 'password-code'; participant: AdminParticipant }
+  | {
+      type: 'password-code-result';
+      participant: AdminParticipant;
+      code: string;
+      expiresAt: string;
+      setupUrl: string;
+    }
   | null;
 
 const DATE_FORMAT = new Intl.DateTimeFormat('en-GB', {
@@ -362,6 +371,63 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
     }
   }
 
+  async function generatePasswordSetupCode(
+    event: FormEvent<HTMLFormElement>,
+    participant: AdminParticipant,
+  ) {
+    event.preventDefault();
+    setBusy(true);
+    setMessage('');
+    try {
+      const response = await fetch('/api/admin/password-setup-codes', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ userId: participant.id }),
+      });
+      const result = await response.json() as {
+        code?: string;
+        expiresAt?: string;
+        setupUrl?: string;
+        error?: string;
+      };
+      if (!response.ok || !result.code || !result.expiresAt || !result.setupUrl) {
+        throw new Error(result.error || 'A setup code could not be created.');
+      }
+      setDialog({
+        type: 'password-code-result',
+        participant,
+        code: result.code,
+        expiresAt: result.expiresAt,
+        setupUrl: result.setupUrl,
+      });
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'A setup code could not be created.');
+      setDialog(null);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copyPasswordSetupDetails(
+    participant: AdminParticipant,
+    setupUrl: string,
+    code: string,
+    expiresAt: string,
+  ) {
+    try {
+      await navigator.clipboard.writeText([
+        'GHRU Puzzles password setup',
+        `Open: ${setupUrl}`,
+        `Email: ${participant.email}`,
+        `One-time code: ${code}`,
+        `Expires: ${formatDate(expiresAt)}`,
+      ].join('\n'));
+      setMessage('Password setup instructions copied. Share them privately with the participant.');
+    } catch {
+      setMessage('Copying failed. Select and copy the setup details manually.');
+    }
+  }
+
   const metrics = overview
     ? [
         ['Participants', overview.stats.participants],
@@ -538,6 +604,7 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
                   <tr className="text-xs uppercase tracking-wide text-[var(--gx-text-muted)]">
                     <th className="border-b border-[var(--gx-border)] px-4 py-3">Participant</th>
                     <th className="border-b border-[var(--gx-border)] px-4 py-3">Role</th>
+                    <th className="border-b border-[var(--gx-border)] px-4 py-3">Password</th>
                     <th className="border-b border-[var(--gx-border)] px-4 py-3">Signups</th>
                     <th className="border-b border-[var(--gx-border)] px-4 py-3">Submissions</th>
                     <th className="border-b border-[var(--gx-border)] px-4 py-3">Last submission</th>
@@ -554,6 +621,20 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
                         {count(participant.is_administrator)
                           ? 'administrator'
                           : participant.roles?.split(',').join(', ') || 'participant'}
+                      </td>
+                      <td className="border-b border-[var(--gx-border)] px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Badge tone={count(participant.password_enabled) ? 'success' : 'warning'}>
+                            {count(participant.password_enabled) ? 'Set' : 'Not set'}
+                          </Badge>
+                          <button
+                            className="text-xs font-bold text-[var(--gx-accent)] hover:underline"
+                            type="button"
+                            onClick={() => setDialog({ type: 'password-code', participant })}
+                          >
+                            Create code
+                          </button>
+                        </div>
                       </td>
                       <td className="border-b border-[var(--gx-border)] px-4 py-3">{count(participant.active_enrolments)}</td>
                       <td className="border-b border-[var(--gx-border)] px-4 py-3">{count(participant.submissions)}</td>
@@ -763,6 +844,44 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
             </div>
             <DialogActions danger busy={busy} submitLabel="Remove administrator" busyLabel="Removing…" onCancel={() => setDialog(null)} />
           </form>
+        </Modal>
+      ) : null}
+
+      {dialog?.type === 'password-code' ? (
+        <Modal eyebrow="Participant access" title="Create password setup code" description="This invalidates any earlier unused setup code for this participant. Their existing password is unchanged until the new code is used." busy={busy} onClose={() => setDialog(null)}>
+          <form onSubmit={(event) => generatePasswordSetupCode(event, dialog.participant)}>
+            <div className="space-y-2 px-6 py-5 text-sm text-[var(--gx-text)]">
+              <p className="m-0"><strong>Participant:</strong> {dialog.participant.name}</p>
+              <p className="m-0"><strong>Email:</strong> {dialog.participant.email}</p>
+              <p className="mb-0 mt-3 text-[var(--gx-text-muted)]">The code expires after 24 hours. Share it through a private channel; it will be displayed only once here.</p>
+            </div>
+            <DialogActions busy={busy} submitLabel="Create setup code" busyLabel="Creating…" onCancel={() => setDialog(null)} />
+          </form>
+        </Modal>
+      ) : null}
+
+      {dialog?.type === 'password-code-result' ? (
+        <Modal eyebrow="Participant access" title="Password setup code" description="Copy these instructions now. The code is stored only as a one-way hash and cannot be displayed again." busy={false} onClose={() => setDialog(null)}>
+          <div className="space-y-4 px-6 py-5 text-sm">
+            <div>
+              <span className="block text-xs font-bold uppercase tracking-wide text-[var(--gx-text-muted)]">Participant</span>
+              <strong className="text-[var(--gx-text)]">{dialog.participant.name}</strong>
+              <span className="block text-[var(--gx-text-muted)]">{dialog.participant.email}</span>
+            </div>
+            <div>
+              <span className="block text-xs font-bold uppercase tracking-wide text-[var(--gx-text-muted)]">Setup page</span>
+              <code className="mt-1 block break-all rounded-lg bg-[var(--gx-bg-alt)] p-3 text-xs text-[var(--gx-text)]">{dialog.setupUrl}</code>
+            </div>
+            <div>
+              <span className="block text-xs font-bold uppercase tracking-wide text-[var(--gx-text-muted)]">One-time code</span>
+              <code className="mt-1 block rounded-lg bg-[var(--gx-bg-alt)] p-3 text-xl font-bold tracking-widest text-[var(--gx-text)]">{dialog.code}</code>
+            </div>
+            <p className="m-0 text-[var(--gx-text-muted)]">Expires {formatDate(dialog.expiresAt)}.</p>
+          </div>
+          <div className="flex flex-col-reverse gap-3 border-t border-[var(--gx-border)] bg-[var(--gx-bg-alt)] px-6 py-4 sm:flex-row sm:justify-end">
+            <button className="gx-btn gx-btn-secondary" type="button" onClick={() => setDialog(null)}>Close</button>
+            <button className="gx-btn gx-btn-primary" type="button" onClick={() => void copyPasswordSetupDetails(dialog.participant, dialog.setupUrl, dialog.code, dialog.expiresAt)}>Copy instructions</button>
+          </div>
         </Modal>
       ) : null}
     </>
