@@ -3,12 +3,14 @@ import { getEnv } from '@/lib/cloudflare';
 import { jsonError } from '@/lib/assessment';
 import {
   hashPasswordSetupCode,
+  isPasswordSetupOriginAllowed,
   normaliseSignInEmail,
   passwordSetupRateLimitKey,
   validateParticipantPassword,
 } from '@/lib/password-access';
 
 const MAX_SETUP_ATTEMPTS = 10;
+const NO_STORE_HEADERS = { 'cache-control': 'no-store' };
 
 interface SetupCodeRecord {
   id: string;
@@ -17,18 +19,24 @@ interface SetupCodeRecord {
 
 export async function POST(request: Request): Promise<Response> {
   try {
-    requireSameOrigin(request);
     const env = await getEnv();
+    requireSameOrigin(request, env.BETTER_AUTH_URL);
     const body = await readJson(request);
     const email = normaliseSignInEmail(String(body.email ?? ''));
     const code = String(body.code ?? '');
     const password = String(body.password ?? '');
     if (!email || !code) {
-      return Response.json({ error: 'Email address and setup code are required' }, { status: 400 });
+      return Response.json(
+        { error: 'Email address and setup code are required' },
+        { status: 400, headers: NO_STORE_HEADERS },
+      );
     }
     const passwordError = validateParticipantPassword(password);
     if (passwordError) {
-      return Response.json({ error: passwordError }, { status: 400 });
+      return Response.json(
+        { error: passwordError },
+        { status: 400, headers: NO_STORE_HEADERS },
+      );
     }
 
     const rateLimitKey = await passwordSetupRateLimitKey(
@@ -49,7 +57,10 @@ export async function POST(request: Request): Promise<Response> {
     if (Number(attempt?.count ?? 1) > MAX_SETUP_ATTEMPTS) {
       return Response.json(
         { error: 'Too many attempts. Wait 15 minutes before trying again.' },
-        { status: 429, headers: { 'retry-after': '900' } },
+        {
+          status: 429,
+          headers: { ...NO_STORE_HEADERS, 'retry-after': '900' },
+        },
       );
     }
 
@@ -131,7 +142,7 @@ export async function POST(request: Request): Promise<Response> {
 
     return Response.json(
       { status: true },
-      { headers: { 'cache-control': 'no-store' } },
+      { headers: NO_STORE_HEADERS },
     );
   } catch (error) {
     return jsonError(error);
@@ -141,14 +152,16 @@ export async function POST(request: Request): Promise<Response> {
 function invalidCodeResponse(): Response {
   return Response.json(
     { error: 'The email address or setup code is invalid or has expired.' },
-    { status: 400 },
+    { status: 400, headers: NO_STORE_HEADERS },
   );
 }
 
-function requireSameOrigin(request: Request): void {
-  const origin = request.headers.get('origin');
-  if (origin && origin !== new URL(request.url).origin) {
-    throw new Response('Invalid request origin', { status: 403 });
+function requireSameOrigin(request: Request, publicSiteUrl: string): void {
+  if (!isPasswordSetupOriginAllowed(request.headers.get('origin'), publicSiteUrl)) {
+    throw Response.json(
+      { error: 'Invalid request origin' },
+      { status: 403, headers: NO_STORE_HEADERS },
+    );
   }
 }
 
@@ -156,6 +169,9 @@ async function readJson(request: Request): Promise<Record<string, unknown>> {
   try {
     return await request.json() as Record<string, unknown>;
   } catch {
-    throw new Response('Invalid JSON request', { status: 400 });
+    throw Response.json(
+      { error: 'Invalid JSON request' },
+      { status: 400, headers: NO_STORE_HEADERS },
+    );
   }
 }

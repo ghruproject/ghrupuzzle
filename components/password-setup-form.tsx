@@ -31,8 +31,16 @@ export function PasswordSetupForm() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ email, code, password }),
       });
-      const result = await response.json() as { error?: string };
-      if (!response.ok) throw new Error(result.error || 'Your password could not be set.');
+      const responseBody = await response.text();
+      let result: { error?: string } = {};
+      try {
+        result = responseBody ? JSON.parse(responseBody) as { error?: string } : {};
+      } catch {
+        // Non-JSON errors from the platform should still produce a useful message.
+      }
+      if (!response.ok) {
+        throw new Error(result.error || responseBody || 'Your password could not be set.');
+      }
       setPassword('');
       setConfirmation('');
       setCode('');

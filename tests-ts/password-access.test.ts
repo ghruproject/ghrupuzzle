@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   createPasswordSetupCode,
   hashPasswordSetupCode,
+  isPasswordSetupOriginAllowed,
   normalisePasswordSetupCode,
   normaliseSignInEmail,
   passwordSetupExpiry,
@@ -44,6 +45,27 @@ test('setup codes expire 24 hours after creation', () => {
   assert.equal(
     passwordSetupExpiry(new Date('2026-08-11T12:00:00.000Z')),
     '2026-08-12T12:00:00.000Z',
+  );
+});
+
+test('password setup accepts the public site origin through an internal worker URL', () => {
+  assert.equal(
+    isPasswordSetupOriginAllowed(
+      'https://ghrupuzzle.vercel.app',
+      'https://ghrupuzzle.vercel.app/',
+    ),
+    true,
+  );
+  assert.equal(
+    isPasswordSetupOriginAllowed(
+      'https://attacker.example',
+      'https://ghrupuzzle.vercel.app/',
+    ),
+    false,
+  );
+  assert.equal(
+    isPasswordSetupOriginAllowed('not a URL', 'https://ghrupuzzle.vercel.app/'),
+    false,
   );
 });
 

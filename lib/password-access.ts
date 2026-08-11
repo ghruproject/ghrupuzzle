@@ -50,6 +50,18 @@ export function passwordSetupExpiry(now = new Date()): string {
   ).toISOString();
 }
 
+export function isPasswordSetupOriginAllowed(
+  suppliedOrigin: string | null,
+  publicSiteUrl: string,
+): boolean {
+  if (!suppliedOrigin) return true;
+  try {
+    return new URL(suppliedOrigin).origin === new URL(publicSiteUrl).origin;
+  } catch {
+    return false;
+  }
+}
+
 export async function passwordSetupRateLimitKey(
   secret: string,
   request: Request,
