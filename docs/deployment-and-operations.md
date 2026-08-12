@@ -172,6 +172,12 @@ Only GenomePuzzle contract v2 releases are accepted. Exercise instructions,
 participant columns, scorer configuration and pass threshold come from the
 release bundle; do not reproduce them in deployment configuration.
 
+Administrators can open the registered private `answer_key.json` from the
+**Answers** column of the Dataset releases table. The server reads the object
+from private R2 only after rechecking administrator access, returns it with
+`Cache-Control: private, no-store`, and records a `release.answers_viewed`
+audit event. The private object is never exposed through a presigned URL.
+
 ## Run a challenge
 
 1. Create a UTC-timestamped round with `POST /api/admin/rounds`.
