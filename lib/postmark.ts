@@ -49,6 +49,39 @@ export async function sendMagicLinkEmail(
   });
 }
 
+export async function sendPasswordResetEmail(
+  config: PostmarkConfig,
+  recipient: string,
+  url: string,
+): Promise<void> {
+  await sendEmail(config, {
+    to: recipient,
+    subject: 'Reset your GHRUPUZZLES password',
+    textBody: [
+      'Reset your GHRUPUZZLES password',
+      '',
+      'Use this secure, single-use link to choose a new password:',
+      url,
+      '',
+      'The link expires in one hour and can only be used once.',
+      '',
+      'If you did not request this email, you can safely ignore it.',
+    ].join('\n'),
+    htmlBody: renderBrandedEmail({
+      preheader: 'Your GHRUPUZZLES password-reset link expires in one hour.',
+      eyebrow: 'Account recovery',
+      heading: 'Reset your password',
+      introduction: 'Use the button below to choose a new password for your GHRUPUZZLES account.',
+      buttonLabel: 'Reset password',
+      buttonUrl: url,
+      noticeTitle: 'Single-use link',
+      notice: 'For your security, this link expires in one hour and stops working after it has been used.',
+      closing: 'If you did not request this email, you can safely ignore it.',
+    }),
+    tag: 'password-reset',
+  });
+}
+
 export async function sendChallengeOpeningEmail(
   config: PostmarkConfig,
   recipient: string,

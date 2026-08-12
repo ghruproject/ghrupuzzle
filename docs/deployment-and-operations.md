@@ -83,12 +83,20 @@ open-registration challenges. Because their email ownership has not been
 proved, they cannot accept invitation-only access, receive automatic opening
 reminders or gain administrator privileges until the account is confirmed.
 
-Existing magic-link accounts, imported invitees and participants recovering a
-forgotten password use an administrator-issued one-time code. The administrator
-creates it from the participant table in `/admin` and shares the displayed setup
-page, email address and code through a private channel. The participant uses
-`/set-password` to create or replace their password. Using a setup code also
-marks the account as administrator-confirmed for restricted access.
+Participants who forget their password first use `/forgot-password`. Better Auth
+creates a single-use reset token that expires after one hour and Postmark sends
+the branded reset link. The request response never reveals whether an address is
+registered. A successful reset revokes existing sessions and confirms control of
+the account email address.
+
+If the email does not arrive, the participant contacts
+`nabil.alikhan@cgps.group` for an administrator-issued one-time recovery code.
+Existing magic-link accounts and imported invitees use the same code workflow.
+The administrator creates the code from the participant table in `/admin` and
+shares the displayed setup page, email address and code through a private
+channel. The participant uses `/set-password` to create or replace their
+password. Using a setup code also marks the account as administrator-confirmed
+for restricted access.
 
 Invitation imports reserve each email address by creating a passwordless
 participant record. This prevents somebody from registering the invited
@@ -101,7 +109,7 @@ Setup codes expire after 24 hours, are invalidated when a replacement is
 created, and are stored in D1 only as SHA-256 hashes. Using a code invalidates
 the participant's other setup codes and existing sessions. Passwords are
 hashed by Better Auth and are never available to administrators. The same
-workflow provides password recovery without relying on email delivery. Open
+workflow provides a fallback when email delivery fails. Open
 challenge enrolment by an unconfirmed account does not create an automatic
 email reminder subscription.
 

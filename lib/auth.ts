@@ -4,7 +4,7 @@ import { magicLink } from 'better-auth/plugins';
 import { nextCookies } from 'better-auth/next-js';
 import { getEnv } from './cloudflare';
 import { isAdministratorEmailReserved } from './identity-policy';
-import { sendMagicLinkEmail } from './postmark';
+import { sendMagicLinkEmail, sendPasswordResetEmail } from './postmark';
 
 export async function createAuth() {
   const env = await getEnv();
@@ -37,7 +37,21 @@ export async function createAuth() {
       disableSignUp: false,
       minPasswordLength: 12,
       maxPasswordLength: 128,
+      resetPasswordTokenExpiresIn: 60 * 60,
       revokeSessionsOnPasswordReset: true,
+      sendResetPassword: async ({ user, url }) => {
+        await sendPasswordResetEmail(
+          { token: env.POSTMARK_SERVER_TOKEN, from: env.POSTMARK_FROM_EMAIL },
+          user.email,
+          url,
+        );
+      },
+      onPasswordReset: async ({ user }) => {
+        const now = Date.now();
+        await env.DB.prepare(
+          'UPDATE user SET emailVerified = 1, updatedAt = ? WHERE id = ?',
+        ).bind(now, user.id).run();
+      },
     },
     rateLimit: {
       enabled: true,
@@ -48,6 +62,8 @@ export async function createAuth() {
         '/sign-in/magic-link': { window: 60, max: 5 },
         '/sign-in/email': { window: 60, max: 5 },
         '/sign-up/email': { window: 60, max: 3 },
+        '/request-password-reset': { window: 60, max: 3 },
+        '/reset-password': { window: 60, max: 5 },
         '/sign-in/social': { window: 60, max: 10 },
       },
     },

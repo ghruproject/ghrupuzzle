@@ -159,7 +159,7 @@ export function SignInForm({
           </button>
         </form>
         <p className="mb-0 mt-3 text-sm text-[var(--gx-text-muted)]">
-          Forgotten your password? Contact a GHRU Puzzles administrator for help.
+          Forgotten your password? <Link href="/forgot-password">Reset it</Link>.
         </p>
         <details className="mt-5 border-t border-[var(--gx-border)] pt-5">
           <summary className="cursor-pointer text-sm font-bold text-[var(--gx-text)]">

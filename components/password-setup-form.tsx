@@ -137,7 +137,7 @@ export function PasswordSetupForm() {
             <p className="mb-0 mt-5 text-sm text-[var(--gx-text-muted)]">
               Creating a completely new public account? <Link href="/register">Register yourself</Link>—no
               setup code is required. For an existing account without a usable password, contact
-              an administrator. Codes are not sent by email.
+              <a href="mailto:nabil.alikhan@cgps.group"> nabil.alikhan@cgps.group</a>. Codes are not sent by email.
             </p>
           </>
         )}
