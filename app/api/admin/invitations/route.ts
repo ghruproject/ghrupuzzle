@@ -1,5 +1,6 @@
 import { getEnv } from '@/lib/cloudflare';
 import { jsonError, requireRole, requireUser } from '@/lib/assessment';
+import { defaultNameFromEmail } from '@/lib/profile';
 
 export async function POST(request: Request): Promise<Response> {
   try {
@@ -22,6 +23,21 @@ export async function POST(request: Request): Promise<Response> {
       return Response.json({ error: 'One or more email addresses are invalid' }, { status: 400 });
     }
     await env.DB.batch([
+      ...clean.map((invitation) => {
+        const now = new Date().toISOString();
+        return env.DB.prepare(
+          `INSERT INTO user
+             (id, name, email, emailVerified, createdAt, updatedAt)
+           VALUES (?, ?, ?, 0, ?, ?)
+           ON CONFLICT(email) DO NOTHING`,
+        ).bind(
+          crypto.randomUUID(),
+          invitation.name || defaultNameFromEmail(invitation.email),
+          invitation.email,
+          now,
+          now,
+        );
+      }),
       ...clean.map((invitation) =>
         env.DB.prepare(
           `INSERT INTO invitation (id, round_id, email, name)
@@ -40,7 +56,10 @@ export async function POST(request: Request): Promise<Response> {
         JSON.stringify({ count: clean.length }),
       ),
     ]);
-    return Response.json({ imported: clean.length }, { status: 201 });
+    return Response.json(
+      { imported: clean.length, accountsReserved: clean.length },
+      { status: 201 },
+    );
   } catch (error) {
     return jsonError(error);
   }

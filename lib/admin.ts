@@ -46,6 +46,7 @@ export interface AdminParticipant {
   roles: string | null;
   is_administrator: number;
   password_enabled: number;
+  account_confirmed: number;
   active_enrolments: number;
   submissions: number;
   last_submission_at: string | null;

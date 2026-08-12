@@ -1,5 +1,6 @@
 import { getEnv } from '@/lib/cloudflare';
 import { jsonError, requireUser } from '@/lib/assessment';
+import { isAccountEmailVerified } from '@/lib/identity-policy';
 
 export async function POST(
   request: Request,
@@ -25,8 +26,15 @@ export async function POST(
     if (now > new Date(String(round.closes_at))) {
       return Response.json({ error: 'Registration has closed' }, { status: 403 });
     }
+    const accountConfirmed = await isAccountEmailVerified(env.DB, user.id);
     let invitationId: string | null = null;
     if (round.registration_mode === 'invite') {
+      if (!accountConfirmed) {
+        return Response.json(
+          { error: 'Verify this account before accepting an invitation' },
+          { status: 403 },
+        );
+      }
       const invitation = await env.DB.prepare(
         `SELECT id FROM invitation
           WHERE round_id = ? AND email = ? COLLATE NOCASE AND accepted_by IS NULL`,
@@ -39,7 +47,7 @@ export async function POST(
       invitationId = invitation.id;
     }
     const enrolmentId = crypto.randomUUID();
-    const openingReminder = now < new Date(String(round.opens_at));
+    const openingReminder = accountConfirmed && now < new Date(String(round.opens_at));
     const statements = [
       env.DB.prepare(
         `INSERT INTO enrolment (id, round_id, user_id)

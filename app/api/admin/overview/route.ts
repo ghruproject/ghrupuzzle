@@ -79,6 +79,7 @@ export async function GET(request: Request): Promise<Response> {
                   WHEN a.providerId = 'credential' AND a.password IS NOT NULL THEN 1
                   ELSE 0
                 END) AS password_enabled,
+                MAX(u.emailVerified) AS account_confirmed,
                 COUNT(DISTINCT CASE WHEN e.status = 'active' THEN e.round_id END) AS active_enrolments,
                 COUNT(DISTINCT s.id) AS submissions,
                 MAX(s.submitted_at) AS last_submission_at

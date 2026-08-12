@@ -52,6 +52,7 @@ test('robots blocks private and API routes and advertises the sitemap', () => {
 
   assert.ok(rules?.disallow?.includes('/api/'));
   assert.ok(rules?.disallow?.includes('/dashboard'));
+  assert.ok(rules?.disallow?.includes('/register'));
   assert.ok(rules?.disallow?.includes('/set-password'));
   assert.equal(policy.sitemap, new URL('/sitemap.xml', SITE_URL).toString());
 });

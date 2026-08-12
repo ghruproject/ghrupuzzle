@@ -604,7 +604,7 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
                   <tr className="text-xs uppercase tracking-wide text-[var(--gx-text-muted)]">
                     <th className="border-b border-[var(--gx-border)] px-4 py-3">Participant</th>
                     <th className="border-b border-[var(--gx-border)] px-4 py-3">Role</th>
-                    <th className="border-b border-[var(--gx-border)] px-4 py-3">Password</th>
+                    <th className="border-b border-[var(--gx-border)] px-4 py-3">Account access</th>
                     <th className="border-b border-[var(--gx-border)] px-4 py-3">Signups</th>
                     <th className="border-b border-[var(--gx-border)] px-4 py-3">Submissions</th>
                     <th className="border-b border-[var(--gx-border)] px-4 py-3">Last submission</th>
@@ -623,9 +623,12 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
                           : participant.roles?.split(',').join(', ') || 'participant'}
                       </td>
                       <td className="border-b border-[var(--gx-border)] px-4 py-3">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Badge tone={count(participant.password_enabled) ? 'success' : 'warning'}>
-                            {count(participant.password_enabled) ? 'Set' : 'Not set'}
+                            {count(participant.password_enabled) ? 'Password set' : 'No password'}
+                          </Badge>
+                          <Badge tone={count(participant.account_confirmed) ? 'success' : 'neutral'}>
+                            {count(participant.account_confirmed) ? 'Confirmed' : 'Public only'}
                           </Badge>
                           <button
                             className="text-xs font-bold text-[var(--gx-accent)] hover:underline"
@@ -776,7 +779,7 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
       ) : null}
 
       {dialog?.type === 'invitations' ? (
-        <Modal eyebrow="Challenge access" title="Import invitations" description="Enter one participant per line as email or email,name. Existing invitations are updated." busy={busy} onClose={() => setDialog(null)}>
+        <Modal eyebrow="Challenge access" title="Import invitations" description="Enter one participant per line as email or email,name. Addresses are reserved so they cannot be claimed through public registration; give each invitee a setup code from the participant table." busy={busy} onClose={() => setDialog(null)}>
           <form onSubmit={submitInvitations}>
             <div className="space-y-4 px-6 py-5">
               <Field label="Challenge round"><select className="gx-input mt-2 w-full" name="roundId" required defaultValue=""><option value="" disabled>Select a round</option>{overview?.rounds.map((round) => <option value={round.id} key={round.id}>{round.title}</option>)}</select></Field>
@@ -848,14 +851,14 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
       ) : null}
 
       {dialog?.type === 'password-code' ? (
-        <Modal eyebrow="Participant access" title="Create password setup code" description="This invalidates any earlier unused setup code for this participant. Their existing password is unchanged until the new code is used." busy={busy} onClose={() => setDialog(null)}>
+        <Modal eyebrow="Participant access" title="Create setup or recovery code" description="Use this for a reserved or existing passwordless account, or to recover a forgotten password. This invalidates any earlier unused code; the existing password remains valid until this code is used." busy={busy} onClose={() => setDialog(null)}>
           <form onSubmit={(event) => generatePasswordSetupCode(event, dialog.participant)}>
             <div className="space-y-2 px-6 py-5 text-sm text-[var(--gx-text)]">
               <p className="m-0"><strong>Participant:</strong> {dialog.participant.name}</p>
               <p className="m-0"><strong>Email:</strong> {dialog.participant.email}</p>
               <p className="mb-0 mt-3 text-[var(--gx-text-muted)]">The code expires after 24 hours. Share it through a private channel; it will be displayed only once here.</p>
             </div>
-            <DialogActions busy={busy} submitLabel="Create setup code" busyLabel="Creating…" onCancel={() => setDialog(null)} />
+            <DialogActions busy={busy} submitLabel="Create one-time code" busyLabel="Creating…" onCancel={() => setDialog(null)} />
           </form>
         </Modal>
       ) : null}

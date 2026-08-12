@@ -1,6 +1,8 @@
 import { getEnv } from '@/lib/cloudflare';
 import { jsonError, requireRole, requireUser } from '@/lib/assessment';
 import { normaliseAdministratorEmail } from '@/lib/admin-helpers';
+import { canGrantAdministratorAccess } from '@/lib/identity-policy';
+import { defaultNameFromEmail } from '@/lib/profile';
 
 export async function POST(request: Request): Promise<Response> {
   try {
@@ -12,6 +14,24 @@ export async function POST(request: Request): Promise<Response> {
     if (!email) {
       return Response.json({ error: 'Enter a valid email address' }, { status: 400 });
     }
+    if (!(await canGrantAdministratorAccess(env.DB, email))) {
+      return Response.json(
+        {
+          error: 'Confirm this account with a setup code or verified sign-in before granting administrator access.',
+        },
+        { status: 409 },
+      );
+    }
+
+    const now = new Date().toISOString();
+    await env.DB.prepare(
+      `INSERT INTO user
+         (id, name, email, emailVerified, createdAt, updatedAt)
+       VALUES (?, ?, ?, 0, ?, ?)
+       ON CONFLICT(email) DO NOTHING`,
+    )
+      .bind(crypto.randomUUID(), defaultNameFromEmail(email), email, now, now)
+      .run();
 
     const result = await env.DB.prepare(
       `INSERT INTO administrator_email (email, added_by)

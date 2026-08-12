@@ -3,6 +3,7 @@ import { APIError } from 'better-auth/api';
 import { magicLink } from 'better-auth/plugins';
 import { nextCookies } from 'better-auth/next-js';
 import { getEnv } from './cloudflare';
+import { isAdministratorEmailReserved } from './identity-policy';
 import { sendMagicLinkEmail } from './postmark';
 
 export async function createAuth() {
@@ -33,7 +34,7 @@ export async function createAuth() {
     database: env.DB,
     emailAndPassword: {
       enabled: true,
-      disableSignUp: true,
+      disableSignUp: false,
       minPasswordLength: 12,
       maxPasswordLength: 128,
       revokeSessionsOnPasswordReset: true,
@@ -46,6 +47,7 @@ export async function createAuth() {
       customRules: {
         '/sign-in/magic-link': { window: 60, max: 5 },
         '/sign-in/email': { window: 60, max: 5 },
+        '/sign-up/email': { window: 60, max: 3 },
         '/sign-in/social': { window: 60, max: 10 },
       },
     },
@@ -56,6 +58,25 @@ export async function createAuth() {
     socialProviders,
     databaseHooks: {
       user: {
+        create: {
+          before: async (user, context) => {
+            if (
+              context?.path === '/sign-up/email'
+              && await isAdministratorEmailReserved(env.DB, user.email)
+            ) {
+              throw new APIError('FORBIDDEN', {
+                message: 'This email address requires administrator-assisted setup.',
+              });
+            }
+            const name = user.name.trim().replace(/\s+/g, ' ');
+            if (name.length < 2 || name.length > 120) {
+              throw new APIError('BAD_REQUEST', {
+                message: 'Name must be between 2 and 120 characters.',
+              });
+            }
+            return { data: { ...user, name } };
+          },
+        },
         update: {
           before: async (user) => {
             if (user.name === undefined) return;

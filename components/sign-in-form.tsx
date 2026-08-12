@@ -87,9 +87,20 @@ export function SignInForm({
           Sign in to GHRUPUZZLES
         </h1>
         <p className="text-[var(--gx-text-muted)]">
-          Sign in to submit practice results, sign up for a challenge and access certificates.
-          Your account is created automatically on your first successful sign-in.
+          Use your existing account to submit practice results, enter challenges and access
+          certificates.
         </p>
+
+        <div className="mb-5 rounded-xl border border-[var(--gx-accent)]/30 bg-[var(--gx-accent)]/10 p-4 text-sm">
+          <strong className="block text-[var(--gx-text)]">New participant?</strong>
+          <span className="text-[var(--gx-text-muted)]">
+            Create your own account with an email address and password. No emailed link or
+            administrator code is needed.
+          </span>
+          <Link className="gx-btn gx-btn-secondary mt-3 w-full justify-center" href={`/register?returnTo=${encodeURIComponent(returnTo)}`}>
+            Create an account
+          </Link>
+        </div>
 
         {hasSocialSignIn ? (
           <div className="flex flex-col gap-3 mb-5">
@@ -149,8 +160,8 @@ export function SignInForm({
           </button>
         </form>
         <p className="mb-0 mt-3 text-sm text-[var(--gx-text-muted)]">
-          Setting or resetting your password? Ask an administrator for a one-time setup code,
-          then <Link href="/set-password">use the password setup page</Link>.
+          Used GHRU Puzzles before without a password, or forgotten it? Ask an administrator for
+          a one-time recovery code, then <Link href="/set-password">set a new password</Link>.
         </p>
         <details className="mt-5 border-t border-[var(--gx-border)] pt-5">
           <summary className="cursor-pointer text-sm font-bold text-[var(--gx-text)]">

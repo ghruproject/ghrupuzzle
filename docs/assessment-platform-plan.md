@@ -48,7 +48,7 @@ The platform contains four exercises:
 3. Hybrid assembly
 4. Outbreak investigation, including phylogenetic reconstruction
 
-Anyone with a verified account may use the practice exercises. Challenge
+Anyone with an account may use the practice exercises. Challenge
 releases are available only within configured time windows. Challenge
 eligibility may be open self-enrolment or invitation-only on a per-round
 basis.
@@ -57,7 +57,8 @@ basis.
 
 ### Practice
 
-1. Sign in using Google, Microsoft, or an email magic link.
+1. Create an email-and-password account, or sign in using an existing password,
+   Google, Microsoft, or an email magic link.
 2. Open a permanently available practice exercise.
 3. Download the public practice files and sample sheet.
 4. Submit a completed result file.
@@ -132,11 +133,20 @@ The login page presents:
 ---------- or ----------
 
 Email address
+[ Sign in ]
+
+New participant? [ Create an account ]
+
+---------- optional fallback ----------
+
 [ Email me a sign-in link ]
 ```
 
-OAuth covers participants with Google or Microsoft identities. The email
-magic-link option supports any functioning email address.
+Email-and-password registration is the primary public route and does not rely
+on email delivery. OAuth covers participants with Google or Microsoft
+identities when configured. The email magic-link option remains an optional
+fallback for functioning email addresses. Administrator-issued setup codes
+support imported, existing passwordless and recovery accounts.
 
 Postmark is called through its HTTP API rather than an SMTP socket. The
 Postmark server token is stored as a Worker secret.
@@ -146,6 +156,11 @@ Authentication policy:
 - magic links are cryptographically random and single-use;
 - magic links expire after approximately 10 to 15 minutes;
 - login sessions last approximately 30 days;
+- public password registration is limited to new, non-reserved addresses;
+- administrator and imported invitation addresses are protected from public
+  account claiming;
+- unconfirmed public accounts cannot accept invitation-only access or gain
+  administrator privileges;
 - authentication responses do not reveal whether an email is registered;
 - login requests are rate-limited;
 - magic-link tokens and complete login URLs are never logged;

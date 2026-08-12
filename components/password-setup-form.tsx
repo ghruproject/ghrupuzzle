@@ -59,7 +59,7 @@ export function PasswordSetupForm() {
           Participant account
         </div>
         <h1 className="mb-4 mt-0 text-3xl font-bold leading-tight text-[var(--gx-text)]">
-          Set your password
+          Use a setup or recovery code
         </h1>
         {complete ? (
           <div role="status">
@@ -74,8 +74,9 @@ export function PasswordSetupForm() {
         ) : (
           <>
             <p className="text-[var(--gx-text-muted)]">
-              Enter the one-time code supplied by a GHRU Puzzles administrator. Codes expire
-              after 24 hours and work only once.
+              This page is for an existing, administrator-imported or locked-out account. Enter
+              the one-time code supplied by a GHRU Puzzles administrator. Codes expire after 24
+              hours and work only once.
             </p>
             <form className="mt-5 flex flex-col gap-4" onSubmit={submit}>
               <label className="label" htmlFor="setup-email">Email address</label>
@@ -134,7 +135,9 @@ export function PasswordSetupForm() {
             </form>
             {message ? <p className="text-sm text-red-700 dark:text-red-300" role="alert">{message}</p> : null}
             <p className="mb-0 mt-5 text-sm text-[var(--gx-text-muted)]">
-              No setup code? Contact a GHRU Puzzles administrator. Codes are not sent by email.
+              Creating a completely new public account? <Link href="/register">Register yourself</Link>—no
+              setup code is required. For an existing account without a usable password, contact
+              an administrator. Codes are not sent by email.
             </p>
           </>
         )}
