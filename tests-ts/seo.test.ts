@@ -51,6 +51,7 @@ test('robots blocks private and API routes and advertises the sitemap', () => {
   const rules = Array.isArray(policy.rules) ? policy.rules[0] : policy.rules;
 
   assert.ok(rules?.disallow?.includes('/api/'));
+  assert.ok(rules?.disallow?.includes('/admin'));
   assert.ok(rules?.disallow?.includes('/dashboard'));
   assert.ok(rules?.disallow?.includes('/register'));
   assert.ok(rules?.disallow?.includes('/set-password'));

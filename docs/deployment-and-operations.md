@@ -172,11 +172,17 @@ Only GenomePuzzle contract v2 releases are accepted. Exercise instructions,
 participant columns, scorer configuration and pass threshold come from the
 release bundle; do not reproduce them in deployment configuration.
 
-Administrators can open the registered private `answer_key.json` from the
-**Answers** column of the Dataset releases table. The server reads the object
-from private R2 only after rechecking administrator access, returns it with
-`Cache-Control: private, no-store`, and records a `release.answers_viewed`
-audit event. The private object is never exposed through a presigned URL.
+Administrators open **Release details** beneath a release name in the Dataset
+releases table. The page lists the exact registered private R2 prefix, renders
+the scoring policy, and provides an explicit **Reveal answers** control. The
+answer key is not included in the initial page response. Private file links use
+opaque hashes that the server resolves against a fresh listing of the release's
+registered `/private/` prefix, so browsers never provide R2 paths.
+
+Every details-page view, answer reveal/export, and private-file view/download
+is audited. File responses use `Cache-Control: private, no-store`, a restrictive
+content security policy and safe server-selected content types. Private objects
+are never exposed through presigned URLs.
 
 ## Run a challenge
 

@@ -566,14 +566,12 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
                       <td className="border-b border-[var(--gx-border)] px-3 py-3">
                         <strong className="text-[var(--gx-text)]">{release.release_id}</strong>
                         <span className="block text-xs text-[var(--gx-text-muted)]">{release.round_title || 'Practice'}</span>
-                        <a
+                        <Link
                           className="mt-1 block text-xs font-semibold"
-                          href={`/api/admin/releases/${encodeURIComponent(release.id)}/answers`}
-                          rel="noopener noreferrer"
-                          target="_blank"
+                          href={`/admin/releases/${encodeURIComponent(release.id)}`}
                         >
-                          View answers →
-                        </a>
+                          Release details →
+                        </Link>
                       </td>
                       <td className="border-b border-[var(--gx-border)] px-3 py-3 capitalize">{release.exercise}</td>
                       <td className="border-b border-[var(--gx-border)] px-3 py-3"><Badge tone={release.mode === 'challenge' ? 'accent' : 'neutral'}>{release.mode}</Badge></td>
