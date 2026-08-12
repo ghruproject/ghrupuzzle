@@ -58,9 +58,12 @@ files.
 
 ### Additional files
 
-- [ ] Required assemblies, tree or project files are present.
+Complete this section only when the exercise page explicitly requests files in
+addition to the result sheet.
+
+- [ ] Every explicitly required assembly, tree or project file is present.
 - [ ] Filenames are descriptive and contain no sensitive information.
-- [ ] Tree tip names match metadata identifiers.
+- [ ] Identifiers in additional files match the public sample identifiers.
 - [ ] The package contains results, not unnecessary intermediate files.
 - [ ] No password, token or confidential local path is included.
 

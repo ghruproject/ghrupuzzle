@@ -10,9 +10,10 @@ order: 6
 
 ## What this exercise tests
 
-You are given paired-end reads and epidemiological metadata. Perform a
-consistent mapping-based analysis, build a tree and use both genomic and
-contextual evidence to assign analytical clusters.
+You are given paired-end reads. Perform a consistent mapping-based analysis,
+build a tree and use the genomic evidence to assign analytical clusters. The
+tree is an analysis output: unless the exercise page explicitly says otherwise,
+submit only the completed CSV or TSV result sheet.
 
 The commands below form a worked example. Equivalent validated bacterial
 variant-calling workflows are acceptable unless the exercise specifies one.
@@ -90,25 +91,23 @@ iqtree2 \
 Retain the `.treefile`, `.iqtree` report and logs. Review branch support and
 investigate unusually long branches before assigning clusters.
 
-## 6. Combine the tree and metadata
+## 6. Review the tree and assign clusters
 
-Tree tip names must match metadata identifiers exactly. A visualisation tool
-such as [Microreact](https://microreact.org/) can be useful for reviewing the
-tree alongside sample metadata. Before combining them:
+Tree tip names must match the public sample identifiers exactly. A tree
+visualisation tool can be useful for reviewing topology, branch lengths and
+support. Before assigning clusters:
 
-- keep one metadata row per sample;
-- use an unambiguous date format;
-- check that tree and metadata identifiers join;
-- inspect colours, locations and dates; and
-- confirm that the visualised tree and metadata support your reported cluster
-  assignments.
+- confirm that every passing sample is represented once;
+- investigate unexpectedly long branches or weakly supported groupings;
+- keep failed samples out of the cluster interpretation; and
+- confirm that the tree supports the cluster labels entered in the result
+  sheet.
 
 ## Assign clusters
 
 Do not apply a universal SNP threshold unless the exercise defines one.
-Consider genetic distance, topology, branch support, collection date, location,
-host/source information and QC limitations together. A phylogenetic tree does
-not prove direct transmission.
+Consider genetic distance, topology, branch support and QC limitations
+together. A phylogenetic tree does not prove direct transmission.
 
 Use stable labels such as `Cluster 1`, `Cluster 2` and `Unclustered`, unless the
 result sheet requests another vocabulary.
@@ -124,6 +123,7 @@ review filtering.
 **Extremely long branch:** Investigate contamination, mixed reads and calling
 errors.
 
-**Tree and metadata fail to join:** Normalise identifiers once and reuse them.
+**Tree tip mismatch:** Normalise identifiers once and reuse the public sample
+identifiers throughout the analysis.
 
 Next: [submission and troubleshooting](/guides/submission-and-troubleshooting).
