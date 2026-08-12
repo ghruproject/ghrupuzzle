@@ -94,8 +94,7 @@ export function SignInForm({
         <div className="mb-5 rounded-xl border border-[var(--gx-accent)]/30 bg-[var(--gx-accent)]/10 p-4 text-sm">
           <strong className="block text-[var(--gx-text)]">New participant?</strong>
           <span className="text-[var(--gx-text-muted)]">
-            Create your own account with an email address and password. No emailed link or
-            administrator code is needed.
+            Register to join challenges, submit results and access certificates.
           </span>
           <Link className="gx-btn gx-btn-secondary mt-3 w-full justify-center" href={`/register?returnTo=${encodeURIComponent(returnTo)}`}>
             Create an account
@@ -160,8 +159,7 @@ export function SignInForm({
           </button>
         </form>
         <p className="mb-0 mt-3 text-sm text-[var(--gx-text-muted)]">
-          Used GHRU Puzzles before without a password, or forgotten it? Ask an administrator for
-          a one-time recovery code, then <Link href="/set-password">set a new password</Link>.
+          Forgotten your password? Contact a GHRU Puzzles administrator for help.
         </p>
         <details className="mt-5 border-t border-[var(--gx-border)] pt-5">
           <summary className="cursor-pointer text-sm font-bold text-[var(--gx-text)]">

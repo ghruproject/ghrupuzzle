@@ -24,8 +24,9 @@ test('new participants receive a prominent self-registration route', () => {
   assert.match(signInSource, /New participant\?/);
   assert.match(signInSource, /href=\{`\/register\?returnTo=/);
   assert.match(registrationSource, /authClient\.signUp\.email/);
-  assert.match(registrationSource, /No confirmation email/);
-  assert.match(registrationSource, /No confirmation email\s+or administrator code is required/);
+  assert.doesNotMatch(signInSource, /No emailed link or\s+administrator code is needed/);
+  assert.doesNotMatch(registrationSource, /No confirmation email/);
+  assert.doesNotMatch(registrationSource, /setup code/i);
 });
 
 test('password registration is rate-limited and protects administrator addresses', () => {

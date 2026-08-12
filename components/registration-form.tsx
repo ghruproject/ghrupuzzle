@@ -40,7 +40,7 @@ export function RegistrationForm() {
       });
       if (result.error) {
         setMessage(
-          'That account could not be created. If this address has been used or invited before, sign in or ask an administrator for a setup code.',
+          'That account could not be created. If you already have an account, sign in instead. Otherwise, contact a GHRU Puzzles administrator.',
         );
         return;
       }
@@ -62,8 +62,7 @@ export function RegistrationForm() {
           Create your account
         </h1>
         <p className="text-[var(--gx-text-muted)]">
-          Register directly with your name, email address and a password. No confirmation email
-          or administrator code is required for a new public account.
+          Join GHRUPUZZLES to enter challenges, submit results and access certificates.
         </p>
         <form className="mt-5 flex flex-col gap-4" onSubmit={submit}>
           <label className="label" htmlFor="registration-name">Your name</label>
@@ -122,10 +121,6 @@ export function RegistrationForm() {
         {message ? <p className="text-sm text-red-700 dark:text-red-300" role="alert">{message}</p> : null}
         <p className="mb-0 mt-5 text-sm text-[var(--gx-text-muted)]">
           Already have an account? <Link href={`/sign-in?returnTo=${encodeURIComponent(returnTo)}`}>Sign in</Link>.
-        </p>
-        <p className="mb-0 mt-2 text-xs text-[var(--gx-text-muted)]">
-          If an administrator imported your address for an invite-only cohort, use the setup code
-          they provide instead of registering again.
         </p>
       </section>
     </div>
