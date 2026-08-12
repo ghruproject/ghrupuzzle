@@ -549,7 +549,7 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
               <button className="gx-btn gx-btn-secondary" type="button" onClick={() => setDialog({ type: 'release' })}>Register</button>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+              <table className="w-full min-w-[680px] border-collapse text-left text-sm">
                 <thead>
                   <tr className="text-xs uppercase tracking-wide text-[var(--gx-text-muted)]">
                     <th className="border-b border-[var(--gx-border)] px-3 py-2">Release</th>
@@ -558,7 +558,6 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
                     <th className="border-b border-[var(--gx-border)] px-3 py-2">Schema</th>
                     <th className="border-b border-[var(--gx-border)] px-3 py-2">Submissions</th>
                     <th className="border-b border-[var(--gx-border)] px-3 py-2">Page</th>
-                    <th className="border-b border-[var(--gx-border)] px-3 py-2">Answers</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -567,6 +566,14 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
                       <td className="border-b border-[var(--gx-border)] px-3 py-3">
                         <strong className="text-[var(--gx-text)]">{release.release_id}</strong>
                         <span className="block text-xs text-[var(--gx-text-muted)]">{release.round_title || 'Practice'}</span>
+                        <a
+                          className="mt-1 block text-xs font-semibold"
+                          href={`/api/admin/releases/${encodeURIComponent(release.id)}/answers`}
+                          rel="noopener noreferrer"
+                          target="_blank"
+                        >
+                          View answers →
+                        </a>
                       </td>
                       <td className="border-b border-[var(--gx-border)] px-3 py-3 capitalize">{release.exercise}</td>
                       <td className="border-b border-[var(--gx-border)] px-3 py-3"><Badge tone={release.mode === 'challenge' ? 'accent' : 'neutral'}>{release.mode}</Badge></td>
@@ -579,16 +586,6 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
                         >
                           {release.mode === 'challenge' ? 'Preview' : 'Open'} →
                         </Link>
-                      </td>
-                      <td className="border-b border-[var(--gx-border)] px-3 py-3">
-                        <a
-                          className="font-semibold"
-                          href={`/api/admin/releases/${encodeURIComponent(release.id)}/answers`}
-                          rel="noopener noreferrer"
-                          target="_blank"
-                        >
-                          View →
-                        </a>
                       </td>
                     </tr>
                   ))}

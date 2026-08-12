@@ -12,8 +12,9 @@ const dashboardSource = readFileSync(
 );
 
 test('dataset release table links administrators to registered answer keys', () => {
-  assert.match(dashboardSource, />Answers<\/th>/);
   assert.match(dashboardSource, /\/api\/admin\/releases\/\$\{encodeURIComponent\(release\.id\)\}\/answers/);
+  assert.match(dashboardSource, /View answers →/);
+  assert.doesNotMatch(dashboardSource, />Answers<\/th>/);
   assert.match(dashboardSource, /target="_blank"/);
 });
 
