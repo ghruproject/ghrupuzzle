@@ -3,6 +3,10 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
 import { authClient } from '@/lib/auth-client';
+import {
+  normaliseRegistrationEmail,
+  registrationErrorMessage,
+} from '@/lib/registration';
 
 export function RegistrationForm() {
   const [name, setName] = useState('');
@@ -22,6 +26,7 @@ export function RegistrationForm() {
     event.preventDefault();
     setMessage('');
     const normalisedName = name.trim().replace(/\s+/g, ' ');
+    const normalisedEmail = normaliseRegistrationEmail(email);
     if (normalisedName.length < 2 || normalisedName.length > 120) {
       setMessage('Enter your name using 2–120 characters.');
       return;
@@ -34,14 +39,12 @@ export function RegistrationForm() {
     try {
       const result = await authClient.signUp.email({
         name: normalisedName,
-        email,
+        email: normalisedEmail,
         password,
         callbackURL: returnTo,
       });
       if (result.error) {
-        setMessage(
-          'That account could not be created. If you already have an account, sign in instead. Otherwise, contact a GHRU Puzzles administrator.',
-        );
+        setMessage(registrationErrorMessage(result.error));
         return;
       }
       window.location.assign(returnTo);
