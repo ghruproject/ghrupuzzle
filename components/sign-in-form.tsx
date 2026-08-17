@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
 import { authClient } from '@/lib/auth-client';
+import { authCallbackURL } from '@/lib/auth-navigation';
 import { defaultNameFromEmail } from '@/lib/profile';
 
 export function SignInForm({
@@ -32,7 +33,7 @@ export function SignInForm({
     const result = await authClient.signIn.email({
       email,
       password,
-      callbackURL: returnTo,
+      callbackURL: authCallbackURL(returnTo),
       rememberMe: true,
     });
     if (result.error) {
@@ -50,7 +51,7 @@ export function SignInForm({
     const result = await authClient.signIn.magicLink({
       email,
       name: defaultNameFromEmail(email),
-      callbackURL: returnTo,
+      callbackURL: authCallbackURL(returnTo),
       errorCallbackURL: `/sign-in?returnTo=${encodeURIComponent(returnTo)}`,
     });
     setBusy(false);
@@ -66,7 +67,7 @@ export function SignInForm({
     setMessage('');
     const result = await authClient.signIn.social({
       provider,
-      callbackURL: returnTo,
+      callbackURL: authCallbackURL(returnTo),
       errorCallbackURL: `/sign-in?returnTo=${encodeURIComponent(returnTo)}`,
     });
     if (result?.error) {

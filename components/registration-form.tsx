@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
 import { authClient } from '@/lib/auth-client';
+import { authCallbackURL } from '@/lib/auth-navigation';
 import {
   normaliseRegistrationEmail,
   registrationErrorMessage,
@@ -41,7 +42,7 @@ export function RegistrationForm() {
         name: normalisedName,
         email: normalisedEmail,
         password,
-        callbackURL: returnTo,
+        callbackURL: authCallbackURL(returnTo),
       });
       if (result.error) {
         setMessage(registrationErrorMessage(result.error));

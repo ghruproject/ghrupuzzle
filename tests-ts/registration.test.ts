@@ -35,6 +35,8 @@ test('new participants receive a prominent self-registration route', () => {
   assert.doesNotMatch(signInSource, /No emailed link or\s+administrator code is needed/);
   assert.doesNotMatch(registrationSource, /No confirmation email/);
   assert.doesNotMatch(registrationSource, /setup code/i);
+  assert.match(registrationSource, /callbackURL: authCallbackURL\(returnTo\)/);
+  assert.match(signInSource, /callbackURL: authCallbackURL\(returnTo\)/);
 });
 
 test('participants can request and complete password recovery with an administrator fallback', () => {
