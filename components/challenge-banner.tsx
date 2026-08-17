@@ -47,7 +47,7 @@ export function ChallengeBanner() {
         setChallenge(schedule.featured);
         setEnrolmentStatus(matchingRound?.enrolment_status ?? null);
         setVisible(
-          window.localStorage.getItem(dismissalKey) !== 'dismissed',
+          window.sessionStorage.getItem(dismissalKey) !== 'dismissed',
         );
       })
       .catch(() => undefined);
@@ -60,7 +60,7 @@ export function ChallengeBanner() {
   if (!visible || !challenge) return null;
 
   function dismiss() {
-    window.localStorage.setItem(
+    window.sessionStorage.setItem(
       `challenge-banner:${challenge?.slug}`,
       'dismissed',
     );

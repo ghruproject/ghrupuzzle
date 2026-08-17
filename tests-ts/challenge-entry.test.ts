@@ -22,3 +22,9 @@ test('signed-up challenge entry points lead to the exercise chooser', () => {
   assert.match(challengeBanner, /isOpen && pathname === '\/challenge'/);
   assert.doesNotMatch(challengeBanner, /signedUp && isOpen\s*\? '\/challenge'/);
 });
+
+test('closing the challenge banner lasts only for the current browser session', () => {
+  assert.match(challengeBanner, /window\.sessionStorage\.getItem/);
+  assert.match(challengeBanner, /window\.sessionStorage\.setItem/);
+  assert.doesNotMatch(challengeBanner, /window\.localStorage/);
+});
