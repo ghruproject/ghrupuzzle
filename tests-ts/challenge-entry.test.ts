@@ -17,5 +17,8 @@ test('signed-up challenge entry points lead to the exercise chooser', () => {
   assert.match(challengeBanner, /'\/challenge#challenge-exercises'/);
   assert.match(roundList, /href="\/challenge#challenge-exercises"/);
   assert.match(challengePage, /href=\{exercise\.challengeHref\}/);
+  assert.match(challengePage, /Choose a challenge exercise below/);
+  assert.doesNotMatch(challengePage, /href="#challenge-exercises"/);
+  assert.match(challengeBanner, /isOpen && pathname === '\/challenge'/);
   assert.doesNotMatch(challengeBanner, /signedUp && isOpen\s*\? '\/challenge'/);
 });

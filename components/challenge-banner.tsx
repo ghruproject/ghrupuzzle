@@ -81,8 +81,8 @@ export function ChallengeBanner() {
       : 'Sign up';
   const showAction = !(
     signedUp &&
-    !isOpen &&
-    pathname === '/dashboard'
+    ((isOpen && pathname === '/challenge') ||
+      (!isOpen && pathname === '/dashboard'))
   );
 
   return (

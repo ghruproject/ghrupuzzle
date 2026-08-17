@@ -34,9 +34,9 @@ function ChallengeAction({
   if (challenge.phase === 'open') {
     if (enrolled) {
       return (
-        <Link className="gx-btn gx-btn-primary" href="#challenge-exercises">
-          Choose a challenge exercise
-        </Link>
+        <p className="m-0 text-sm font-bold text-[var(--gx-text-bright)]">
+          Choose a challenge exercise below <span aria-hidden="true">↓</span>
+        </p>
       );
     }
     if (signedIn) {
