@@ -113,7 +113,7 @@ export function RoundList({
 
         <div className="flex shrink-0 flex-wrap gap-2">
           {round && phase === 'open' && signedUp ? (
-            <Link className="gx-btn gx-btn-primary" href="/challenge">
+            <Link className="gx-btn gx-btn-primary" href="/challenge#challenge-exercises">
               Start challenge
             </Link>
           ) : null}

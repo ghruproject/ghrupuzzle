@@ -70,10 +70,10 @@ export function ChallengeBanner() {
   const isOpen = challenge.phase === 'open';
   const signedUp = enrolmentStatus === 'active';
   const actionHref = signedUp && isOpen
-    ? '/challenge'
+    ? '/challenge#challenge-exercises'
     : session
       ? '/dashboard#challenge-status'
-      : '/sign-in?returnTo=%2Fdashboard';
+      : '/sign-in?returnTo=%2Fdashboard%23challenge-status';
   const actionLabel = signedUp && isOpen
     ? 'Start challenge'
     : signedUp
