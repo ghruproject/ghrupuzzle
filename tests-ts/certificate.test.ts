@@ -37,8 +37,14 @@ test('certificate embeds a public GHRU Puzzles verification URL in a valid PDF',
 test('certificate describes participation without claiming proficiency', async () => {
   const source = await readFile(new URL('../lib/certificate.ts', import.meta.url), 'utf8');
 
-  assert.match(source, /Certificate of Participation/);
+  assert.match(source, /CERTIFICATE/);
+  assert.match(source, /OF PARTICIPATION/);
   assert.match(source, /participating in and completing all four exercises/);
+  assert.match(source, /practical microbial genomics challenge using simulated datasets/);
+  assert.match(source, /Sequence typing/);
+  assert.match(source, /Short-read assembly/);
+  assert.match(source, /Hybrid assembly/);
+  assert.match(source, /Outbreak investigation/);
   assert.doesNotMatch(source, /Genomic Analysis Proficiency/);
 });
 
