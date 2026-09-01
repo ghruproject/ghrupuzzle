@@ -24,6 +24,19 @@ export async function POST(request: Request): Promise<Response> {
       JSON.stringify(payload),
     )
     .run();
+  const certificateStatus = {
+    Delivery: 'delivered',
+    Bounce: 'bounced',
+    SpamComplaint: 'complaint',
+  }[eventType];
+  if (certificateStatus && payload.MessageID) {
+    await env.DB.prepare(
+      `UPDATE certificate SET email_status = ?
+        WHERE email_message_id = ?`,
+    )
+      .bind(certificateStatus, String(payload.MessageID))
+      .run();
+  }
   return new Response(null, { status: 204 });
 }
 

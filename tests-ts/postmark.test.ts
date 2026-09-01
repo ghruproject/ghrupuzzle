@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { renderBrandedEmail, sendMagicLinkEmail, sendPasswordResetEmail } from '@/lib/postmark';
+import {
+  renderBrandedEmail,
+  sendCertificateIssuedEmail,
+  sendMagicLinkEmail,
+  sendPasswordResetEmail,
+} from '@/lib/postmark';
 
 test('magic-link email sends a branded accessible HTML and text pair', async () => {
   const originalFetch = globalThis.fetch;
@@ -84,4 +89,35 @@ test('branded email renderer escapes challenge content', () => {
   assert.match(html, /Challenge &lt;1&gt;/);
   assert.match(html, /August &amp; ready/);
   assert.match(html, /round=1&amp;open=true/);
+});
+
+test('certificate email links participants to their dashboard and public verification', async () => {
+  const originalFetch = globalThis.fetch;
+  let payload: Record<string, unknown> | undefined;
+  globalThis.fetch = async (_input, init) => {
+    payload = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    return Response.json({ ErrorCode: 0, Message: 'OK', MessageID: 'certificate-message-id' });
+  };
+
+  try {
+    const messageId = await sendCertificateIssuedEmail(
+      { token: 'postmark-test-token', from: 'GHRU Puzzles <test@example.org>' },
+      'participant@example.org',
+      'Alex Participant',
+      'Challenge 2',
+      'https://ghrupuzzle.vercel.app/dashboard',
+      'https://ghrupuzzle.vercel.app/verify/public-code',
+    );
+    assert.equal(messageId, 'certificate-message-id');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.ok(payload);
+  assert.equal(payload.Subject, 'Your GHRUPUZZLES Challenge 2 certificate');
+  assert.equal(payload.Tag, 'certificate-issued');
+  assert.match(String(payload.TextBody), /Alex Participant/);
+  assert.match(String(payload.TextBody), /\/dashboard/);
+  assert.match(String(payload.TextBody), /\/verify\/public-code/);
+  assert.match(String(payload.HtmlBody), /View and download certificate/);
 });

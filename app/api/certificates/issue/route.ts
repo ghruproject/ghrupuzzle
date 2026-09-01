@@ -6,6 +6,7 @@ import {
   renderCertificate,
 } from '@/lib/certificate';
 import { CHALLENGE_EXERCISES } from '@/lib/admin-round-completion';
+import { sendCertificateEmail } from '@/lib/certificate-email';
 
 export async function POST(request: Request): Promise<Response> {
   try {
@@ -152,8 +153,22 @@ export async function POST(request: Request): Promise<Response> {
       await env.PRIVATE_ASSETS.delete(objectKey);
       throw error;
     }
+    const email = await sendCertificateEmail(env, actor.id, {
+      certificateId,
+      publicCode,
+      participantName,
+      participantEmail: participant.email,
+      roundTitle: round.title,
+    });
     return Response.json(
-      { certificateId, publicCode, verificationUrl, alreadyIssued: false },
+      {
+        certificateId,
+        publicCode,
+        verificationUrl,
+        alreadyIssued: false,
+        emailStatus: email.sent ? 'sent' : email.skipped ? 'skipped' : 'failed',
+        emailError: email.error,
+      },
       { status: 201 },
     );
   } catch (error) {

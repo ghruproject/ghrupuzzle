@@ -108,6 +108,43 @@ export async function sendChallengeOpeningEmail(
   });
 }
 
+export async function sendCertificateIssuedEmail(
+  config: PostmarkConfig,
+  recipient: string,
+  participantName: string,
+  roundTitle: string,
+  dashboardUrl: string,
+  verificationUrl: string,
+): Promise<string | null> {
+  return sendEmail(config, {
+    to: recipient,
+    subject: `Your GHRUPUZZLES ${roundTitle} certificate`,
+    textBody: [
+      `Congratulations, ${participantName}.`,
+      '',
+      `Your achievement certificate for ${roundTitle} is ready.`,
+      '',
+      'Sign in to view and download your certificate:',
+      dashboardUrl,
+      '',
+      'Your certificate can also be verified publicly:',
+      verificationUrl,
+    ].join('\n'),
+    htmlBody: renderBrandedEmail({
+      preheader: `Your ${roundTitle} achievement certificate is ready.`,
+      eyebrow: 'Achievement certificate',
+      heading: 'Your certificate is ready',
+      introduction: `Congratulations, ${participantName}. Your achievement certificate for ${roundTitle} is now available in your participant dashboard.`,
+      buttonLabel: 'View and download certificate',
+      buttonUrl: dashboardUrl,
+      noticeTitle: 'Public verification',
+      notice: `Your certificate has a unique verification record at ${verificationUrl}`,
+      closing: 'Thank you for taking part in GHRUPUZZLES.',
+    }),
+    tag: 'certificate-issued',
+  });
+}
+
 interface BrandedEmailContent {
   preheader: string;
   eyebrow: string;

@@ -35,6 +35,9 @@ export type AdminRoundParticipant = {
   openReviews: number;
   activeCertificateId: string | null;
   certificateCode: string | null;
+  certificateEmailStatus: 'not_sent' | 'sending' | 'sent' | 'delivered' | 'bounced' | 'complaint' | 'failed' | null;
+  certificateEmailSentAt: string | null;
+  certificateEmailError: string | null;
   overallStatus:
     | 'Not started'
     | 'In progress'
@@ -99,6 +102,9 @@ type RawEnrollee = {
   is_administrator: number;
   active_certificate_id: string | null;
   certificate_code: string | null;
+  certificate_email_status: AdminRoundParticipant['certificateEmailStatus'];
+  certificate_email_sent_at: string | null;
+  certificate_email_error: string | null;
 };
 
 type RawSubmission = {
@@ -206,6 +212,9 @@ export function buildRoundParticipant(
     openReviews,
     activeCertificateId: enrollee.active_certificate_id,
     certificateCode: enrollee.certificate_code,
+    certificateEmailStatus: enrollee.certificate_email_status,
+    certificateEmailSentAt: enrollee.certificate_email_sent_at,
+    certificateEmailError: enrollee.certificate_email_error,
     overallStatus,
     eligible,
   };
@@ -234,7 +243,10 @@ export async function getAdminRoundCompletion(
       `SELECT u.id AS user_id, u.name, u.email, e.enrolled_at,
               MAX(CASE WHEN ae.email IS NOT NULL THEN 1 ELSE 0 END) AS is_administrator,
               MAX(CASE WHEN c.revoked_at IS NULL THEN c.id END) AS active_certificate_id,
-              MAX(CASE WHEN c.revoked_at IS NULL THEN c.public_code END) AS certificate_code
+              MAX(CASE WHEN c.revoked_at IS NULL THEN c.public_code END) AS certificate_code,
+              MAX(CASE WHEN c.revoked_at IS NULL THEN c.email_status END) AS certificate_email_status,
+              MAX(CASE WHEN c.revoked_at IS NULL THEN c.email_sent_at END) AS certificate_email_sent_at,
+              MAX(CASE WHEN c.revoked_at IS NULL THEN c.email_error END) AS certificate_email_error
          FROM enrolment e
          JOIN user u ON u.id = e.user_id
          LEFT JOIN administrator_email ae ON ae.email = u.email COLLATE NOCASE

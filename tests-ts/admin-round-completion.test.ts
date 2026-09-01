@@ -17,6 +17,9 @@ const enrollee = {
   is_administrator: 0,
   active_certificate_id: null,
   certificate_code: null,
+  certificate_email_status: null,
+  certificate_email_sent_at: null,
+  certificate_email_error: null,
 };
 
 function submission(

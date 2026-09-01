@@ -67,6 +67,25 @@ function overallTone(status: AdminRoundParticipant['overallStatus']) {
   return 'neutral' as const;
 }
 
+function emailTone(status: AdminRoundParticipant['certificateEmailStatus']) {
+  if (status === 'delivered') return 'success' as const;
+  if (status === 'sent' || status === 'sending') return 'accent' as const;
+  if (status === 'bounced' || status === 'complaint' || status === 'failed') return 'danger' as const;
+  return 'neutral' as const;
+}
+
+function emailLabel(status: AdminRoundParticipant['certificateEmailStatus']) {
+  return {
+    not_sent: 'Not emailed',
+    sending: 'Sending',
+    sent: 'Sent',
+    delivered: 'Delivered',
+    bounced: 'Bounced',
+    complaint: 'Spam complaint',
+    failed: 'Failed',
+  }[status || 'not_sent'];
+}
+
 function csvCell(value: string | number | boolean): string {
   const text = String(value);
   return `"${text.replaceAll('"', '""')}"`;
@@ -170,6 +189,33 @@ export function AdminRoundCompletionPage({ initialData }: { initialData: AdminRo
     setBusy(false);
   }
 
+  async function emailIssuedCertificates() {
+    const pending = data.participants.filter(
+      (participant) => participant.activeCertificateId
+        && (participant.certificateEmailStatus === 'not_sent' || participant.certificateEmailStatus === 'failed'),
+    );
+    if (!pending.length) return;
+    if (!window.confirm(
+      `Email ${pending.length} issued certificate${pending.length === 1 ? '' : 's'} now? Each participant will receive a link to sign in and download their PDF.`,
+    )) return;
+    setBusy(true);
+    setMessage(`Emailing ${pending.length} certificate${pending.length === 1 ? '' : 's'}…`);
+    try {
+      const response = await fetch(
+        `/api/admin/rounds/${encodeURIComponent(data.round.id)}/certificate-emails`,
+        { method: 'POST' },
+      );
+      const result = (await response.json()) as { sent?: number; failed?: number; error?: string };
+      if (!response.ok) throw new Error(result.error || 'Certificate emails could not be sent.');
+      await reload();
+      setMessage(`${Number(result.sent || 0)} certificate email(s) sent${result.failed ? `; ${result.failed} failed` : ''}. Delivery status will update from Postmark.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Certificate emails could not be sent.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function exportCsv() {
     const rows = [
       ['Name', 'Email', 'Administrator', ...CHALLENGE_EXERCISES, 'Exercises completed', 'Attempts', 'Overall status', 'Certificate code'],
@@ -195,6 +241,10 @@ export function AdminRoundCompletionPage({ initialData }: { initialData: AdminRo
 
   const allEligibleSelected = eligibleParticipants.length > 0
     && eligibleParticipants.every((participant) => selected.has(participant.userId));
+  const pendingCertificateEmails = data.participants.filter(
+    (participant) => participant.activeCertificateId
+      && (participant.certificateEmailStatus === 'not_sent' || participant.certificateEmailStatus === 'failed'),
+  ).length;
 
   return (
     <div className="mx-auto max-w-[1500px] px-4 py-10">
@@ -212,6 +262,11 @@ export function AdminRoundCompletionPage({ initialData }: { initialData: AdminRo
           {data.round.closed && data.summary.provisionalScores > 0 ? (
             <button className="gx-btn gx-btn-secondary" type="button" disabled={busy} onClick={() => void finaliseScores()}>
               Finalise {data.summary.provisionalScores} scores
+            </button>
+          ) : null}
+          {pendingCertificateEmails > 0 ? (
+            <button className="gx-btn gx-btn-secondary" type="button" disabled={busy} onClick={() => void emailIssuedCertificates()}>
+              Email {pendingCertificateEmails} certificate{pendingCertificateEmails === 1 ? '' : 's'}
             </button>
           ) : null}
           <button
@@ -340,6 +395,9 @@ export function AdminRoundCompletionPage({ initialData }: { initialData: AdminRo
                         <Link className="text-xs font-semibold" href={`/verify/${participant.certificateCode}`}>
                           Verify certificate →
                         </Link>
+                        <span className="mt-1"><Badge tone={emailTone(participant.certificateEmailStatus)}>{emailLabel(participant.certificateEmailStatus)}</Badge></span>
+                        {participant.certificateEmailSentAt ? <span className="text-xs text-[var(--gx-text-muted)]">{formatDate(participant.certificateEmailSentAt)}</span> : null}
+                        {participant.certificateEmailError ? <span className="max-w-56 text-xs text-red-700 dark:text-red-300">{participant.certificateEmailError}</span> : null}
                       </span>
                     ) : participant.eligible ? (
                       <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">Ready to issue</span>
