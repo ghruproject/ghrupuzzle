@@ -309,7 +309,7 @@ export function AdminRoundCompletionPage({ initialData }: { initialData: AdminRo
           <div>
             <h2 className="m-0 text-xl font-bold text-[var(--gx-text)]">Participant completion</h2>
             <p className="mb-0 mt-1 text-sm text-[var(--gx-text-muted)]">
-              Completion means at least one valid submission for every registered exercise. Achievement certificates require four final passing results and no open review.
+              After the round closes, scores without open reviews are finalised automatically. Participants who pass all four exercises are issued and emailed their achievement certificate automatically. Manual controls remain available as a fallback.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">

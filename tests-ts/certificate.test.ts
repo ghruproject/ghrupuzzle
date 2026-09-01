@@ -35,15 +35,27 @@ test('certificate embeds a public GHRU Puzzles verification URL in a valid PDF',
 });
 
 test('certificate issuance is idempotent and the database permits one active certificate', async () => {
-  const [routeSource, migrationSource] = await Promise.all([
-    readFile(new URL('../app/api/certificates/issue/route.ts', import.meta.url), 'utf8'),
+  const [issuanceSource, migrationSource] = await Promise.all([
+    readFile(new URL('../lib/certificate-issuance.ts', import.meta.url), 'utf8'),
     readFile(new URL('../migrations/0010_certificate_single_active.sql', import.meta.url), 'utf8'),
   ]);
 
-  assert.match(routeSource, /activeCertificate && !body\.supersedesId/);
-  assert.match(routeSource, /alreadyIssued: true/);
+  assert.match(issuanceSource, /activeCertificate && !supersedesId/);
+  assert.match(issuanceSource, /alreadyIssued: true/);
   assert.match(migrationSource, /UNIQUE INDEX IF NOT EXISTS/);
   assert.match(migrationSource, /WHERE revoked_at IS NULL/);
+});
+
+test('closed-round automation finalises unreviewed scores before issuing certificates', async () => {
+  const source = await readFile(
+    new URL('../lib/automatic-certificates.ts', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(source, /datetime\(r\.closes_at\) < datetime\(\?\)/);
+  assert.match(source, /rv\.status IN \('requested', 'in_review'\)/);
+  assert.match(source, /sc\.passed = 1 AND sc\.provisional = 0/);
+  assert.match(source, /issueCertificate/);
 });
 
 test('administrators receive direct PDF download links for issued certificates', async () => {

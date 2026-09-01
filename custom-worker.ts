@@ -4,6 +4,7 @@
 import handler from './.open-next/worker.js';
 import { sendChallengeOpeningReminders } from './lib/challenge-reminders';
 import { sendPendingCertificateEmails } from './lib/certificate-email';
+import { processAutomaticCertificates } from './lib/automatic-certificates';
 import type { CloudflareEnv } from './lib/cloudflare';
 
 export default {
@@ -15,7 +16,7 @@ export default {
   ): Promise<void> {
     context.waitUntil(Promise.all([
       sendChallengeOpeningReminders(env),
-      sendPendingCertificateEmails(env),
+      processAutomaticCertificates(env).then(() => sendPendingCertificateEmails(env)),
     ]).then(() => undefined));
   },
 } satisfies ExportedHandler<CloudflareEnv>;
