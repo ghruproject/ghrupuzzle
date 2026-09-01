@@ -3,6 +3,7 @@
 // @ts-ignore generated build output is unavailable before the first Cloudflare build
 import handler from './.open-next/worker.js';
 import { sendChallengeOpeningReminders } from './lib/challenge-reminders';
+import { sendPendingCertificateEmails } from './lib/certificate-email';
 import type { CloudflareEnv } from './lib/cloudflare';
 
 export default {
@@ -12,7 +13,10 @@ export default {
     env: CloudflareEnv,
     context: ExecutionContext,
   ): Promise<void> {
-    context.waitUntil(sendChallengeOpeningReminders(env).then(() => undefined));
+    context.waitUntil(Promise.all([
+      sendChallengeOpeningReminders(env),
+      sendPendingCertificateEmails(env),
+    ]).then(() => undefined));
   },
 } satisfies ExportedHandler<CloudflareEnv>;
 

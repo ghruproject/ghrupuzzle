@@ -75,3 +75,31 @@ export async function sendCertificateEmail(
     return { sent: false, skipped: false, messageId: null, error: message };
   }
 }
+
+export async function sendPendingCertificateEmails(
+  env: CloudflareEnv,
+): Promise<{ sent: number; failed: number; skipped: number }> {
+  const rows = await env.DB.prepare(
+    `SELECT c.id AS certificateId, c.public_code AS publicCode,
+            u.name AS participantName, u.email AS participantEmail,
+            r.title AS roundTitle
+       FROM certificate c
+       JOIN user u ON u.id = c.user_id
+       JOIN assessment_round r ON r.id = c.round_id
+      WHERE c.revoked_at IS NULL
+        AND c.email_status IN ('not_sent', 'failed')
+      ORDER BY c.issued_at
+      LIMIT 50`,
+  ).all<CertificateEmailRecipient>();
+
+  let sent = 0;
+  let failed = 0;
+  let skipped = 0;
+  for (const recipient of rows.results) {
+    const result = await sendCertificateEmail(env, null, recipient);
+    if (result.sent) sent += 1;
+    else if (result.skipped) skipped += 1;
+    else failed += 1;
+  }
+  return { sent, failed, skipped };
+}
