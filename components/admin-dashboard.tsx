@@ -534,6 +534,12 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
                       <span><strong>{count(round.open_reviews)}</strong><br /><span className="text-[var(--gx-text-muted)]">open reviews</span></span>
                       <span><strong>{count(round.provisional_scores)}</strong><br /><span className="text-[var(--gx-text-muted)]">provisional</span></span>
                     </div>
+                    <Link
+                      className="gx-btn gx-btn-secondary mt-4 w-full justify-center sm:w-auto"
+                      href={`/admin/rounds/${encodeURIComponent(round.id)}`}
+                    >
+                      Manage participants and certificates →
+                    </Link>
                   </article>
                 );
               }) : <p className="m-0 text-sm text-[var(--gx-text-muted)]">{loading ? 'Loading rounds…' : 'No challenge rounds have been created.'}</p>}
@@ -738,7 +744,7 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
                     <Badge tone={certificate.revoked_at ? 'danger' : 'success'}>{certificate.revoked_at ? 'Revoked' : 'Active'}</Badge>
                   </div>
                   <div className="mt-2 flex gap-3 text-xs font-bold">
-                    <Link className="text-[var(--gx-accent)] hover:underline" href={`/certificates/verify/${certificate.public_code}`}>Verify</Link>
+                    <Link className="text-[var(--gx-accent)] hover:underline" href={`/verify/${certificate.public_code}`}>Verify</Link>
                     {!certificate.revoked_at ? <button className="text-red-700 hover:underline dark:text-red-300" type="button" onClick={() => setDialog({ type: 'revoke', certificate })}>Revoke</button> : null}
                   </div>
                 </article>

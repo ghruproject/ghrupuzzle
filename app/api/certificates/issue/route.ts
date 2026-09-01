@@ -5,8 +5,7 @@ import {
   createCertificatePublicCode,
   renderCertificate,
 } from '@/lib/certificate';
-
-const REQUIRED_EXERCISES = new Set(['typing', 'assembly', 'hybrid', 'outbreak']);
+import { CHALLENGE_EXERCISES } from '@/lib/admin-round-completion';
 
 export async function POST(request: Request): Promise<Response> {
   try {
@@ -35,6 +34,30 @@ export async function POST(request: Request): Promise<Response> {
     if (new Date() <= new Date(round.closes_at)) {
       return Response.json({ error: 'Certificates can only be issued after the round closes' }, { status: 409 });
     }
+    const activeCertificate = await env.DB.prepare(
+      `SELECT id, public_code FROM certificate
+        WHERE user_id = ? AND round_id = ? AND revoked_at IS NULL
+        LIMIT 1`,
+    )
+      .bind(body.userId, body.roundId)
+      .first<{ id: string; public_code: string }>();
+    if (activeCertificate && !body.supersedesId) {
+      return Response.json({
+        certificateId: activeCertificate.id,
+        publicCode: activeCertificate.public_code,
+        verificationUrl: certificateVerificationUrl(
+          env.BETTER_AUTH_URL,
+          activeCertificate.public_code,
+        ),
+        alreadyIssued: true,
+      });
+    }
+    if (body.supersedesId && activeCertificate?.id !== body.supersedesId) {
+      return Response.json(
+        { error: 'Certificate selected for reissue is not the active certificate' },
+        { status: 409 },
+      );
+    }
     const results = await env.DB.prepare(
       `SELECT d.exercise, MAX(sc.passed) AS passed
          FROM dataset_release d
@@ -48,7 +71,7 @@ export async function POST(request: Request): Promise<Response> {
     const passed = new Set(
       results.results.filter((row) => Boolean(row.passed)).map((row) => row.exercise),
     );
-    if ([...REQUIRED_EXERCISES].some((exercise) => !passed.has(exercise))) {
+    if (CHALLENGE_EXERCISES.some((exercise) => !passed.has(exercise))) {
       return Response.json(
         { error: 'All four challenge exercises require a final passing score' },
         { status: 409 },
@@ -75,7 +98,7 @@ export async function POST(request: Request): Promise<Response> {
     const snapshot = {
       participantName,
       roundTitle: round.title,
-      exercises: [...REQUIRED_EXERCISES],
+      exercises: [...CHALLENGE_EXERCISES],
       results: results.results,
       issuedAt,
     };
@@ -92,7 +115,17 @@ export async function POST(request: Request): Promise<Response> {
       customMetadata: { certificateId, publicCode },
     });
     try {
-      const statements = [
+      const statements = [];
+      if (body.supersedesId) {
+        statements.push(
+          env.DB.prepare(
+            `UPDATE certificate
+                SET revoked_at = CURRENT_TIMESTAMP, revocation_reason = 'Reissued'
+              WHERE id = ? AND user_id = ? AND round_id = ? AND revoked_at IS NULL`,
+          ).bind(body.supersedesId, body.userId, body.roundId),
+        );
+      }
+      statements.push(
         env.DB.prepare(
           `INSERT INTO certificate
              (id, public_code, user_id, round_id, issued_at, supersedes_id,
@@ -113,34 +146,16 @@ export async function POST(request: Request): Promise<Response> {
              (id, actor_user_id, action, target_type, target_id, after_json)
            VALUES (?, ?, 'certificate.issued', 'certificate', ?, ?)`,
         ).bind(crypto.randomUUID(), actor.id, certificateId, JSON.stringify(snapshot)),
-      ];
-      if (body.supersedesId) {
-        const previous = await env.DB.prepare(
-          'SELECT id FROM certificate WHERE id = ? AND user_id = ? AND round_id = ? AND revoked_at IS NULL',
-        )
-          .bind(body.supersedesId, body.userId, body.roundId)
-          .first();
-        if (!previous) {
-          await env.PRIVATE_ASSETS.delete(objectKey);
-          return Response.json(
-            { error: 'Certificate selected for reissue is not active' },
-            { status: 409 },
-          );
-        }
-        statements.push(
-          env.DB.prepare(
-            `UPDATE certificate
-                SET revoked_at = CURRENT_TIMESTAMP, revocation_reason = 'Reissued'
-              WHERE id = ?`,
-          ).bind(body.supersedesId),
-        );
-      }
+      );
       await env.DB.batch(statements);
     } catch (error) {
       await env.PRIVATE_ASSETS.delete(objectKey);
       throw error;
     }
-    return Response.json({ certificateId, publicCode, verificationUrl }, { status: 201 });
+    return Response.json(
+      { certificateId, publicCode, verificationUrl, alreadyIssued: false },
+      { status: 201 },
+    );
   } catch (error) {
     return jsonError(error);
   }
