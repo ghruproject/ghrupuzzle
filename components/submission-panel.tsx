@@ -4,12 +4,14 @@ import Link from 'next/link';
 import {
   type DragEvent,
   type FormEvent,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from 'react';
 import { usePathname } from 'next/navigation';
+import { authClient } from '@/lib/auth-client';
 import type { ExerciseMode } from '@/lib/exercises';
 import {
   buildPracticeSampleFeedback,
@@ -20,6 +22,14 @@ import {
   type ContractCondition,
   type SubmissionField,
 } from '@/lib/release-contract';
+import {
+  buildInitialSubmissionRows,
+  restoreSubmissionDraft,
+  serialiseSubmissionDraft,
+  submissionDraftContract,
+  submissionDraftStorageKey,
+  type SubmissionDraftRows,
+} from '@/lib/submission-draft';
 
 interface AvailableRelease {
   id: string;
@@ -65,7 +75,9 @@ interface SubmissionResult {
   details?: { items: ScoreItem[] };
 }
 
-type SubmissionRows = Record<string, Record<string, string>>;
+type SubmissionRows = SubmissionDraftRows;
+type NoticeTone = 'info' | 'success' | 'warning' | 'error';
+type DraftStatus = 'idle' | 'unsaved' | 'saving' | 'saved' | 'error';
 
 const SUBMISSION_PAGE_SIZE = 25;
 
@@ -101,6 +113,7 @@ export function SubmissionPanel({
   const [rows, setRows] = useState<SubmissionRows>({});
   const [authRequired, setAuthRequired] = useState(true);
   const [message, setMessage] = useState('');
+  const [noticeTone, setNoticeTone] = useState<NoticeTone>('info');
   const [issues, setIssues] = useState<ValidationIssue[]>([]);
   const [feedback, setFeedback] = useState<SubmissionResult | null>(null);
   const [busy, setBusy] = useState(false);
@@ -108,8 +121,15 @@ export function SubmissionPanel({
   const [samplePage, setSamplePage] = useState(1);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [draftReady, setDraftReady] = useState(false);
+  const [draftStatus, setDraftStatus] = useState<DraftStatus>('idle');
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const uploadInput = useRef<HTMLInputElement>(null);
+  const noticeRef = useRef<HTMLDivElement>(null);
+  const lastSavedRows = useRef('');
   const pathname = usePathname();
+  const { data: session } = authClient.useSession();
+  const userId = session?.user.id;
 
   useEffect(() => {
     if (!datasetAvailable || administratorPreview) return;
@@ -143,29 +163,43 @@ export function SubmissionPanel({
         if (!active || !result) return;
         setRelease(result.release);
         setDetails(result.details);
-        const initialRows = Object.fromEntries(
-          result.details.samples.map((sample) => [
-            sample.public_name,
-            {
-              sample_id: sample.public_name,
-              failure_reason: 'NONE',
-            },
-          ]),
+        const initialRows = buildInitialSubmissionRows(
+          result.details.samples.map((sample) => sample.public_name),
         );
         setRows(initialRows);
       })
       .catch(() => {
-        if (active) setMessage('Release availability could not be checked.');
+        if (active) {
+          setNoticeTone('error');
+          setMessage('Release availability could not be checked.');
+        }
       });
     return () => {
       active = false;
     };
   }, [administratorPreview, datasetAvailable, exercise, mode]);
 
-  const fields = details?.releaseDefinition.fields ?? [];
+  const fields = useMemo(
+    () => details?.releaseDefinition.fields ?? [],
+    [details],
+  );
   const sampleIds = useMemo(
     () => details?.samples.map((sample) => sample.public_name) ?? [],
     [details],
+  );
+  const draftStorageKey = useMemo(
+    () =>
+      userId && release
+        ? submissionDraftStorageKey(userId, release.id, release.releaseId)
+        : null,
+    [release, userId],
+  );
+  const draftContract = useMemo(
+    () =>
+      release && details
+        ? submissionDraftContract(release.releaseId, sampleIds, fields)
+        : null,
+    [details, fields, release, sampleIds],
   );
   const issueMap = useMemo(
     () => new Map(issues.map((issue) => [issueKey(issue.sampleId, issue.field), issue])),
@@ -195,6 +229,82 @@ export function SubmissionPanel({
     [feedback?.details, sampleIds],
   );
 
+  const persistDraft = useCallback((draftRows: SubmissionRows) => {
+    if (!draftStorageKey || !draftContract) return false;
+    setDraftStatus('saving');
+    try {
+      const savedAt = new Date().toISOString();
+      window.localStorage.setItem(
+        draftStorageKey,
+        serialiseSubmissionDraft(draftContract, draftRows, savedAt),
+      );
+      lastSavedRows.current = JSON.stringify(draftRows);
+      setDraftSavedAt(savedAt);
+      setDraftStatus('saved');
+      return true;
+    } catch {
+      setDraftStatus('error');
+      return false;
+    }
+  }, [draftContract, draftStorageKey]);
+
+  useEffect(() => {
+    if (!draftStorageKey || !draftContract || !details) return;
+    const initialRows = buildInitialSubmissionRows(sampleIds);
+    try {
+      const restored = restoreSubmissionDraft(
+        window.localStorage.getItem(draftStorageKey),
+        draftContract,
+        sampleIds,
+        fields,
+      );
+      const nextRows = restored?.rows ?? initialRows;
+      lastSavedRows.current = JSON.stringify(nextRows);
+      setRows(nextRows);
+      setDraftSavedAt(restored?.savedAt ?? null);
+      setDraftStatus(restored ? 'saved' : 'idle');
+    } catch {
+      lastSavedRows.current = JSON.stringify(initialRows);
+      setRows(initialRows);
+      setDraftStatus('error');
+    }
+    setDraftReady(true);
+  }, [details, draftContract, draftStorageKey, fields, sampleIds]);
+
+  useEffect(() => {
+    if (!draftReady || !draftStorageKey || !draftContract) return;
+    if (JSON.stringify(rows) === lastSavedRows.current) return;
+    setDraftStatus('unsaved');
+    const timer = window.setTimeout(() => persistDraft(rows), 1000);
+    return () => window.clearTimeout(timer);
+  }, [draftContract, draftReady, draftStorageKey, persistDraft, rows]);
+
+  useEffect(() => {
+    if (!draftReady || !draftStorageKey || !draftContract) return;
+    const saveBeforeLeaving = () => {
+      if (JSON.stringify(rows) === lastSavedRows.current) return;
+      try {
+        const savedAt = new Date().toISOString();
+        window.localStorage.setItem(
+          draftStorageKey,
+          serialiseSubmissionDraft(draftContract, rows, savedAt),
+        );
+        lastSavedRows.current = JSON.stringify(rows);
+      } catch {
+        // The visible autosave state already reports storage failures.
+      }
+    };
+    window.addEventListener('pagehide', saveBeforeLeaving);
+    return () => window.removeEventListener('pagehide', saveBeforeLeaving);
+  }, [draftContract, draftReady, draftStorageKey, rows]);
+
+  const revealNotice = useCallback(() => {
+    window.setTimeout(() => {
+      noticeRef.current?.focus({ preventScroll: true });
+      noticeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 0);
+  }, []);
+
   function updateValue(sampleId: string, field: string, value: string) {
     setRows((current) => {
       const row = { ...current[sampleId], [field]: value };
@@ -212,6 +322,7 @@ export function SubmissionPanel({
     if (!release) return false;
     setBusy(true);
     setMessage('');
+    setNoticeTone('info');
     setIssues([]);
     setFeedback(null);
     const formData = new FormData();
@@ -225,7 +336,9 @@ export function SubmissionPanel({
         : { error: (await response.text()).trim() };
       if (!response.ok) {
         setIssues(result.issues ?? []);
+        setNoticeTone('error');
         setMessage(result.error || 'Submission failed.');
+        revealNotice();
         return false;
       }
       setFeedback(result);
@@ -233,19 +346,24 @@ export function SubmissionPanel({
         const submitted = result.submittedAt
           ? new Date(result.submittedAt).toLocaleString('en-GB')
           : 'just now';
+        setNoticeTone('success');
         setMessage(
           `Submission received ${submitted}. This is version ${result.attemptNumber}. You may replace it before the challenge closes.`,
         );
       } else {
+        setNoticeTone(result.passed ? 'success' : 'warning');
         setMessage(
           `Practice submission scored: ${result.earned}/${result.possible} — ${
             result.passed ? 'pass' : 'not yet passed'
           }. You can revise and submit again at any time.`,
         );
       }
+      revealNotice();
       return true;
     } catch {
+      setNoticeTone('error');
       setMessage('Submission could not be completed. Check your connection and try again.');
+      revealNotice();
       return false;
     } finally {
       setBusy(false);
@@ -254,6 +372,7 @@ export function SubmissionPanel({
 
   async function submitStructured(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    persistDraft(rows);
     const csv = buildCsv(fields, sampleIds, rows);
     await postSubmission(
       new File([csv], `${release?.releaseId ?? exercise}-results.csv`, {
@@ -266,7 +385,9 @@ export function SubmissionPanel({
     event.preventDefault();
     const form = event.currentTarget;
     if (!uploadFile) {
+      setNoticeTone('error');
       setMessage('Choose a CSV or TSV result sheet before uploading.');
+      revealNotice();
       return;
     }
     if (await postSubmission(uploadFile)) {
@@ -282,17 +403,22 @@ export function SubmissionPanel({
       || ['text/csv', 'text/tab-separated-values'].includes(file.type);
     if (!accepted) {
       setUploadFile(null);
+      setNoticeTone('error');
       setMessage('Choose a CSV or TSV result sheet.');
       if (uploadInput.current) uploadInput.current.value = '';
+      revealNotice();
       return;
     }
     if (!file.size) {
       setUploadFile(null);
+      setNoticeTone('error');
       setMessage('The selected result sheet is empty.');
       if (uploadInput.current) uploadInput.current.value = '';
+      revealNotice();
       return;
     }
     setMessage('');
+    setNoticeTone('info');
     setUploadFile(file);
   }
 
@@ -302,9 +428,61 @@ export function SubmissionPanel({
     selectUpload(event.dataTransfer.files[0] ?? null);
   }
 
+  const noticeTitle = noticeTone === 'success'
+    ? 'Submission received'
+    : noticeTone === 'warning'
+      ? 'Submission received — review your results'
+      : noticeTone === 'error'
+        ? 'Submission problem'
+        : 'Submission update';
+  const noticeColor = noticeTone === 'success'
+    ? 'var(--gx-success)'
+    : noticeTone === 'warning'
+      ? 'var(--gx-warning)'
+      : noticeTone === 'error'
+        ? 'var(--gx-error)'
+        : 'var(--gx-accent)';
+  const draftStatusMessage = draftStatus === 'unsaved'
+    ? 'Unsaved changes — autosaving shortly…'
+    : draftStatus === 'saving'
+      ? 'Saving progress…'
+      : draftStatus === 'saved' && draftSavedAt
+        ? `Saved at ${new Date(draftSavedAt).toLocaleTimeString('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}`
+        : draftStatus === 'error'
+          ? 'Progress could not be saved in this browser.'
+          : 'Progress will autosave as you work.';
+
   return (
     <section className="card md:col-span-2">
       <h2 className="text-xl font-bold text-[var(--gx-text)] mt-0 mb-3">Submit results</h2>
+      {message ? (
+        <div
+          ref={noticeRef}
+          className="mb-5 flex items-start gap-3 rounded-xl border-2 px-4 py-4 outline-none"
+          style={{
+            borderColor: noticeColor,
+            background: `color-mix(in srgb, ${noticeColor} 10%, var(--gx-surface))`,
+          }}
+          role={noticeTone === 'error' ? 'alert' : 'status'}
+          aria-live={noticeTone === 'error' ? 'assertive' : 'polite'}
+          tabIndex={-1}
+        >
+          <span
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-bold text-white"
+            style={{ background: noticeColor }}
+            aria-hidden="true"
+          >
+            {noticeTone === 'success' ? '✓' : noticeTone === 'error' ? '!' : 'i'}
+          </span>
+          <div>
+            <h3 className="m-0 font-bold text-[var(--gx-text)]">{noticeTitle}</h3>
+            <p className="mb-0 mt-1 text-sm text-[var(--gx-text)]">{message}</p>
+          </div>
+        </div>
+      ) : null}
       {!datasetAvailable ? (
         <p className="text-[var(--gx-text-muted)]">
           Submission will open when this practice dataset and sample sheet are published.
@@ -355,6 +533,24 @@ export function SubmissionPanel({
                   />
                 </label>
               ) : null}
+            </div>
+            <div className="flex flex-col gap-2 rounded-xl border border-[var(--gx-border)] bg-[var(--gx-bg-alt)] p-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="m-0 text-sm font-semibold text-[var(--gx-text)]" role="status" aria-live="polite">
+                  {draftStatusMessage}
+                </p>
+                <p className="mb-0 mt-1 text-xs text-[var(--gx-text-muted)]">
+                  Saved progress is available only in this browser on this device.
+                </p>
+              </div>
+              <button
+                className="gx-btn gx-btn-secondary shrink-0"
+                type="button"
+                disabled={!draftReady || draftStatus === 'saving'}
+                onClick={() => persistDraft(rows)}
+              >
+                Save progress
+              </button>
             </div>
             <div className="overflow-x-auto border border-[var(--gx-border)] rounded-xl">
               <table className="w-full border-collapse min-w-max">
@@ -707,9 +903,6 @@ export function SubmissionPanel({
             : 'Assessment submissions for this practice exercise are being prepared. The preview and downloads remain available.'}
         </p>
       )}
-      {message && !(mode === 'practice' && feedback?.details) ? (
-        <p role="status" className="text-[var(--gx-text-muted)] mt-4">{message}</p>
-      ) : null}
     </section>
   );
 }
