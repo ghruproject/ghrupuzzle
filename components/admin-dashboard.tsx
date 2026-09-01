@@ -744,6 +744,7 @@ export function AdminDashboard({ administratorName }: { administratorName: strin
                     <Badge tone={certificate.revoked_at ? 'danger' : 'success'}>{certificate.revoked_at ? 'Revoked' : 'Active'}</Badge>
                   </div>
                   <div className="mt-2 flex gap-3 text-xs font-bold">
+                    <a className="text-[var(--gx-accent)] hover:underline" href={`/api/certificates/${certificate.id}/download`}>Download PDF</a>
                     <Link className="text-[var(--gx-accent)] hover:underline" href={`/verify/${certificate.public_code}`}>Verify</Link>
                     {!certificate.revoked_at ? <button className="text-red-700 hover:underline dark:text-red-300" type="button" onClick={() => setDialog({ type: 'revoke', certificate })}>Revoke</button> : null}
                   </div>

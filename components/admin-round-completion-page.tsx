@@ -330,7 +330,17 @@ export function AdminRoundCompletionPage({ initialData }: { initialData: AdminRo
                   </td>
                   <td className="border-b border-[var(--gx-border)] px-3 py-3">
                     {participant.certificateCode ? (
-                      <Link className="font-semibold" href={`/verify/${participant.certificateCode}`}>View certificate →</Link>
+                      <span className="flex flex-col gap-1">
+                        <a
+                          className="font-semibold"
+                          href={`/api/certificates/${participant.activeCertificateId}/download`}
+                        >
+                          Download PDF
+                        </a>
+                        <Link className="text-xs font-semibold" href={`/verify/${participant.certificateCode}`}>
+                          Verify certificate →
+                        </Link>
+                      </span>
                     ) : participant.eligible ? (
                       <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">Ready to issue</span>
                     ) : (

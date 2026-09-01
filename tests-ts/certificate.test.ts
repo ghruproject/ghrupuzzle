@@ -45,3 +45,13 @@ test('certificate issuance is idempotent and the database permits one active cer
   assert.match(migrationSource, /UNIQUE INDEX IF NOT EXISTS/);
   assert.match(migrationSource, /WHERE revoked_at IS NULL/);
 });
+
+test('administrators receive direct PDF download links for issued certificates', async () => {
+  const [roundPage, dashboard] = await Promise.all([
+    readFile(new URL('../components/admin-round-completion-page.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../components/admin-dashboard.tsx', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(roundPage, /api\/certificates\/\$\{participant\.activeCertificateId\}\/download/);
+  assert.match(dashboard, /api\/certificates\/\$\{certificate\.id\}\/download/);
+});
