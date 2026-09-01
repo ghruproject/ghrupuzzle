@@ -91,7 +91,7 @@ export default async function VerifyCertificatePage({
                 {valid ? 'Authentic GHRUPUZZLES credential' : 'Credential no longer valid'}
               </p>
               <h1 className="m-0 text-3xl font-bold leading-tight text-[var(--gx-text)] sm:text-4xl">
-                {valid ? 'Certificate verified' : 'Certificate revoked'}
+                {valid ? 'Certificate of participation verified' : 'Certificate revoked'}
               </h1>
               <p className="mb-0 mt-3 max-w-xl text-base leading-7 text-[var(--gx-text-muted)]">
                 {valid
@@ -108,12 +108,12 @@ export default async function VerifyCertificatePage({
             {participantName}
           </h2>
           <p className="mb-0 mt-4 max-w-2xl text-base leading-7 text-[var(--gx-text-muted)]">
-            Successfully passed all required assessments for <strong className="text-[var(--gx-text)]">{roundTitle}</strong>.
+            Participated in and completed all four exercises in <strong className="text-[var(--gx-text)]">{roundTitle}</strong>.
           </p>
 
           <dl className="mt-8 grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-bg-alt)] p-4">
-              <dt className="text-xs font-bold uppercase tracking-wider text-[var(--gx-text-muted)]">Assessment</dt>
+              <dt className="text-xs font-bold uppercase tracking-wider text-[var(--gx-text-muted)]">Challenge</dt>
               <dd className="mb-0 ml-0 mt-2 text-lg font-bold text-[var(--gx-text)]">{roundTitle}</dd>
             </div>
             <div className="rounded-2xl border border-[var(--gx-border)] bg-[var(--gx-bg-alt)] p-4">

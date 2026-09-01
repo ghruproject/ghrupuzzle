@@ -114,10 +114,11 @@ test('certificate email links participants to their dashboard and public verific
   }
 
   assert.ok(payload);
-  assert.equal(payload.Subject, 'Your GHRUPUZZLES Challenge 2 certificate');
+  assert.equal(payload.Subject, 'Your GHRUPUZZLES Challenge 2 certificate of participation');
   assert.equal(payload.Tag, 'certificate-issued');
   assert.match(String(payload.TextBody), /Alex Participant/);
   assert.match(String(payload.TextBody), /\/dashboard/);
   assert.match(String(payload.TextBody), /\/verify\/public-code/);
+  assert.match(String(payload.HtmlBody), /Certificate of participation/);
   assert.match(String(payload.HtmlBody), /View and download certificate/);
 });

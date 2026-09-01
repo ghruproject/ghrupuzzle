@@ -155,7 +155,7 @@ export function AdminRoundCompletionPage({ initialData }: { initialData: AdminRo
     const participants = eligibleParticipants.filter((participant) => selected.has(participant.userId));
     if (!participants.length) return;
     if (!window.confirm(
-      `Issue ${participants.length} achievement certificate${participants.length === 1 ? '' : 's'}? Only participants with four final passing results and no open review are included.`,
+      `Issue ${participants.length} certificate${participants.length === 1 ? '' : 's'} of participation? Only participants with four final passing results and no open review are included.`,
     )) return;
     setBusy(true);
     setMessage(`Issuing 0 of ${participants.length} certificates…`);
@@ -309,7 +309,7 @@ export function AdminRoundCompletionPage({ initialData }: { initialData: AdminRo
           <div>
             <h2 className="m-0 text-xl font-bold text-[var(--gx-text)]">Participant completion</h2>
             <p className="mb-0 mt-1 text-sm text-[var(--gx-text-muted)]">
-              After the round closes, scores without open reviews are finalised automatically. Participants who pass all four exercises are issued and emailed their achievement certificate automatically. Manual controls remain available as a fallback.
+              After the round closes, scores without open reviews are finalised automatically. Participants who complete all four exercises and meet the challenge criteria are issued and emailed their certificate of participation automatically. Manual controls remain available as a fallback.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">

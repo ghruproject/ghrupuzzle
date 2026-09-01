@@ -118,11 +118,11 @@ export async function sendCertificateIssuedEmail(
 ): Promise<string | null> {
   return sendEmail(config, {
     to: recipient,
-    subject: `Your GHRUPUZZLES ${roundTitle} certificate`,
+    subject: `Your GHRUPUZZLES ${roundTitle} certificate of participation`,
     textBody: [
       `Congratulations, ${participantName}.`,
       '',
-      `Your achievement certificate for ${roundTitle} is ready.`,
+      `Your certificate of participation for ${roundTitle} is ready.`,
       '',
       'Sign in to view and download your certificate:',
       dashboardUrl,
@@ -131,10 +131,10 @@ export async function sendCertificateIssuedEmail(
       verificationUrl,
     ].join('\n'),
     htmlBody: renderBrandedEmail({
-      preheader: `Your ${roundTitle} achievement certificate is ready.`,
-      eyebrow: 'Achievement certificate',
-      heading: 'Your certificate is ready',
-      introduction: `Congratulations, ${participantName}. Your achievement certificate for ${roundTitle} is now available in your participant dashboard.`,
+      preheader: `Your ${roundTitle} certificate of participation is ready.`,
+      eyebrow: 'Certificate of participation',
+      heading: 'Your certificate of participation is ready',
+      introduction: `Thank you for taking part, ${participantName}. Your certificate of participation for ${roundTitle} is now available in your participant dashboard.`,
       buttonLabel: 'View and download certificate',
       buttonUrl: dashboardUrl,
       noticeTitle: 'Public verification',

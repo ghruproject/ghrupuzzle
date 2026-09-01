@@ -34,6 +34,14 @@ test('certificate embeds a public GHRU Puzzles verification URL in a valid PDF',
   assert.equal(document.getPageCount(), 1);
 });
 
+test('certificate describes participation without claiming proficiency', async () => {
+  const source = await readFile(new URL('../lib/certificate.ts', import.meta.url), 'utf8');
+
+  assert.match(source, /Certificate of Participation/);
+  assert.match(source, /participating in and completing all four exercises/);
+  assert.doesNotMatch(source, /Genomic Analysis Proficiency/);
+});
+
 test('certificate issuance is idempotent and the database permits one active certificate', async () => {
   const [issuanceSource, migrationSource] = await Promise.all([
     readFile(new URL('../lib/certificate-issuance.ts', import.meta.url), 'utf8'),
@@ -74,9 +82,9 @@ test('public verification presents a credential rather than a raw database recor
     'utf8',
   );
 
-  assert.match(source, /Certificate verified/);
+  assert.match(source, /Certificate of participation verified/);
   assert.match(source, /Awarded to/);
-  assert.match(source, /Successfully passed all required assessments/);
+  assert.match(source, /Participated in and completed all four exercises/);
   assert.match(source, /Verified by GHRUPUZZLES/);
   assert.match(source, /Credential ID/);
   assert.match(source, /This verification page is public/);

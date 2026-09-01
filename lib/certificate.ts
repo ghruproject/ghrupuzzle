@@ -45,12 +45,12 @@ export async function renderCertificate(details: CertificateDetails): Promise<Ui
     borderColor: rgb(0.08, 0.45, 0.52),
   });
   drawCentred(page, 'GHRU Puzzles', titleFont, 28, 510);
-  drawCentred(page, 'Certificate of Genomic Analysis Proficiency', titleFont, 22, 455);
-  drawCentred(page, 'This certifies that', bodyFont, 14, 405);
+  drawCentred(page, 'Certificate of Participation', titleFont, 22, 455);
+  drawCentred(page, 'This certificate is presented to', bodyFont, 14, 405);
   drawCentred(page, details.participantName, titleFont, 26, 360);
   drawCentred(
     page,
-    `successfully completed all four exercises in ${details.roundTitle}`,
+    `for participating in and completing all four exercises in ${details.roundTitle}`,
     bodyFont,
     14,
     318,
