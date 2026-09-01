@@ -67,3 +67,17 @@ test('administrators receive direct PDF download links for issued certificates',
   assert.match(roundPage, /api\/certificates\/\$\{participant\.activeCertificateId\}\/download/);
   assert.match(dashboard, /api\/certificates\/\$\{certificate\.id\}\/download/);
 });
+
+test('public verification presents a credential rather than a raw database record', async () => {
+  const source = await readFile(
+    new URL('../app/verify/[code]/page.tsx', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(source, /Certificate verified/);
+  assert.match(source, /Awarded to/);
+  assert.match(source, /Successfully passed all required assessments/);
+  assert.match(source, /Verified by GHRUPUZZLES/);
+  assert.match(source, /Credential ID/);
+  assert.match(source, /This verification page is public/);
+});
