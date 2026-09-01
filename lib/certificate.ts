@@ -65,14 +65,14 @@ export async function renderCertificate(details: CertificateDetails): Promise<Ui
     color: darkTeal,
   });
 
-  page.drawText('CERTIFICATE', {
+  page.drawText('CERTIFICATE OF', {
     x: 62,
     y: 462,
     size: 12,
     font: titleFont,
     color: darkTeal,
   });
-  page.drawText('OF PARTICIPATION', { x: 62, y: 425, size: 31, font: titleFont, color: navy });
+  page.drawText('PARTICIPATION', { x: 62, y: 425, size: 31, font: titleFont, color: navy });
   page.drawRectangle({ x: 62, y: 405, width: 92, height: 4, color: teal });
 
   page.drawText('PRESENTED TO', {
