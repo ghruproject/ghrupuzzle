@@ -1,3 +1,8 @@
+> [!IMPORTANT]
+> **Development has moved to GitLab.**
+> The maintained repository is [cgps/ghru/ghrupuzzle](https://gitlab.com/cgps/ghru/ghrupuzzle). Please use GitLab for the latest code, issues, and merge requests.
+> This GitHub copy is retained for existing links and migration checks.
+
 # GHRU Puzzles
 
 GHRU Puzzles is the delivery and assessment portal for four microbial
